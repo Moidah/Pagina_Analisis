@@ -1,0 +1,16 @@
+{% extends 'pages/base.html' %}
+
+{% block title %}Métodos{% endblock %}
+
+{% block content %}
+<h1>Métodos</h1>
+<p>Seleccione un método:</p>
+<div class="buttons-container">
+    <a class="btn" href="{% url 'biseccion' %}">Método de Bisección</a>
+    <button class="btn">Método de Punto Fijo</button>
+    <button class="btn">Método de Regla Falsa</button>
+    <button class="btn">Método de Newton</button>
+    <button class="btn">Método Secante</button>
+    <button class="btn">Método de Raíces Múltiples</button>
+</div>
+{% endblock %}

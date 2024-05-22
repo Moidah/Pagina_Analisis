@@ -1,0 +1,23 @@
+{% extends 'pages/base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1>Sitio web donde encontrarás varios métodos utilizados en análisis numérico</h1>
+<p>En métodos encontrarás los diferentes métodos que puedes usar.</p>
+<button class="btn"><a href="{% url 'metodos' %}">Metodos</a></button>
+
+<h2>Gráfica Interactiva</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Generar Gráfica</button>
+</form>
+
+<div>
+    {% if plot_div %}
+        {{ plot_div|safe }}
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    {% endif %}
+</div>
+{% endblock %}
