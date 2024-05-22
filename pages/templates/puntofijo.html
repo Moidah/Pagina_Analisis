@@ -1,0 +1,38 @@
+{% extends 'pages/base.html' %}
+
+{% block title %}Método de Punto Fijo{% endblock %}
+
+{% block content %}
+<h1>Método de Punto Fijo</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Calcular</button>
+</form>
+
+{% if result %}
+    <h2>Resultado:</h2>
+    <p>{{ result }}</p>
+    <p>{{ creciente }}</p>
+
+    <h2>Detalles de las Iteraciones:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Iteración</th>
+                <th>x</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for iter_num, xk, error in iterations %}
+            <tr>
+                <td>{{ iter_num }}</td>
+                <td>{{ xk }}</td>
+                <td>{{ error }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+{% endblock %}

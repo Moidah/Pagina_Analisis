@@ -55,7 +55,10 @@ class MetodosPageView(TemplateView):
 
 class NosotrosPageView(TemplateView):
     template_name = 'nosotros.html'
-    
+
+
+#-------------------------------------METODOS DESDE AQUI-------------------------------------------------------------------------
+#------BISECCION-------------
 class BiseccionForm(forms.Form):
     xi = forms.FloatField(label='Xi', required=True)
     xs = forms.FloatField(label='Xs', required=True)
@@ -131,6 +134,69 @@ class BiseccionPageView(TemplateView):
 
             context['result'] = result
             context['iterations'] = list(zip(fm, E))
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+    
+#---------PUNTO_FIJO--------------------
+class PuntoFijoForm(forms.Form):
+    x0 = forms.FloatField(label='X0', required=True)
+    tol = forms.FloatField(label='Tol', required=True)
+    Nmax = forms.IntegerField(label='Nmax', required=True)
+    g = forms.CharField(label='Function g(x)', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función g(x)'}))
+    
+class PuntoFijoPageView(TemplateView):
+    template_name = 'puntofijo.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = PuntoFijoForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = PuntoFijoForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            x0 = form.cleaned_data['x0']
+            tol = form.cleaned_data['tol']
+            Nmax = form.cleaned_data['Nmax']
+            g_str = form.cleaned_data['g']
+
+            x = sp.symbols('x')
+            g = sp.sympify(g_str)
+            f = (x)**2 -100
+
+            def Cre_o_Decre(f, x0):
+                return sp.diff(f, x).subs(x, x0) > 0
+
+            def PuntoFijo(g, x0, tol, Nmax):
+                
+                #Inicialización
+                xant = x0
+                E = 1000
+                cont = 0
+                iteraciones = []
+                
+                
+                #Ciclo
+                while E > tol and cont < Nmax:
+                    xact = g.subs(x, xant)
+                    E = abs(xact - xant)
+                    cont += 1
+                    iteraciones.append((cont, xact, E))
+                    xant = xact
+
+                return [xact, cont, E], iteraciones
+
+            creciente = Cre_o_Decre(f, x0)
+            (xact, cont, E), iteraciones = PuntoFijo(g, x0, tol, Nmax)
+            result = f"Convergió a {xact} con una tolerancia de {tol}" if E < tol else f"No convergió después de {Nmax} iteraciones"
+
+            context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
+            context['result'] = result
+            context['iterations'] = iteraciones
             context['form'] = form
         else:
             context['form'] = form
