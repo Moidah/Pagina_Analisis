@@ -391,3 +391,74 @@ class SecantePageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+
+
+#------------Raices_Multiples-----------------------------
+
+class RaicesMultiplesForm(forms.Form):
+    x0 = forms.FloatField(label='X0', required=True)
+    tol = forms.FloatField(label='Tol', required=True)
+    n = forms.IntegerField(label='Niter', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    deriv1 = forms.CharField(label='First Derivative', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la primera derivada en términos de x'}))
+    deriv2 = forms.CharField(label='Second Derivative', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la segunda derivada en términos de x'}))
+
+class RaicesMultiplesPageView(TemplateView):
+    template_name = 'raicesmultiples.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = RaicesMultiplesForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = RaicesMultiplesForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            x0 = form.cleaned_data['x0']
+            tol = form.cleaned_data['tol']
+            n = form.cleaned_data['n']
+            fun_str = form.cleaned_data['fun']
+            deriv1_str = form.cleaned_data['deriv1']
+            deriv2_str = form.cleaned_data['deriv2']
+
+            x = sp.symbols('x')
+            f = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
+            derivada1 = sp.lambdify(x, sp.sympify(deriv1_str), 'numpy')
+            derivada2 = sp.lambdify(x, sp.sympify(deriv2_str), 'numpy')
+
+            def RaicesMul(x0, tol, n, f, derivada1, derivada2):
+                fx0 = f(x0)
+                if fx0 == 0:
+                    return x0
+                else:
+                    fx0 = f(x0)
+                    fpx0 = derivada1(x0)
+                    fppx0 = derivada2(x0)
+                    i = 0
+                    error = tol + 1
+                    den = (fpx0**2) - (fx0 * fppx0)
+                    while error > tol and fx0 != 0 and den != 0 and i < n:
+                        x1 = x0 - ((fx0 * fpx0) / den)
+                        fx0 = f(x1)
+                        fpx0 = derivada1(x1)
+                        fppx0 = derivada2(x1)
+                        den = (fpx0**2) - (fx0 * fppx0)
+                        error = np.abs(x1 - x0)
+                        x0 = x1
+                        i += 1
+                    if fx0 == 0:
+                        return x0
+                    elif error < tol:
+                        return [x0, "Error de " + str(error)]
+                    else:
+                        return [x0, "Fracasó en " + str(n) + " iteraciones"]
+
+            result = RaicesMul(x0, tol, n, f, derivada1, derivada2)
+
+            context['result'] = result
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)

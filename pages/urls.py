@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import HomePageView, MetodosPageView, NosotrosPageView, BiseccionPageView, PuntoFijoPageView, ReglaFalsaPageView, NewtonPageView, SecantePageView
+from .views import HomePageView, MetodosPageView, NosotrosPageView, BiseccionPageView, PuntoFijoPageView, ReglaFalsaPageView, NewtonPageView, SecantePageView, RaicesMultiplesPageView
 
 
 urlpatterns = [
@@ -11,4 +11,5 @@ urlpatterns = [
     path('reglafalsa/', ReglaFalsaPageView.as_view(), name='reglafalsa'),
     path('newton/', NewtonPageView.as_view(), name='newton'),
     path('secante/', SecantePageView.as_view(), name='secante'),
+    path('raicesmultiples/', RaicesMultiplesPageView.as_view(), name='raicesmultiples'),
 ]
