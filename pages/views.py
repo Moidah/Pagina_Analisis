@@ -209,6 +209,10 @@ class PuntoFijoPageView(TemplateView):
             (xact, cont, E), iteraciones = PuntoFijo(g, x0, tol, Nmax)
             result = f"Convergió a {xact} con una tolerancia de {tol}" if E < tol else f"No convergió después de {Nmax} iteraciones"
 
+            context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
+            context['result'] = result
+            context['iterations'] = iteraciones
+
             if export:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_puntofijo.txt"'
@@ -219,9 +223,6 @@ class PuntoFijoPageView(TemplateView):
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
-            context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
-            context['result'] = result
-            context['iterations'] = iteraciones
             context['form'] = form
         else:
             context['form'] = form
@@ -326,6 +327,7 @@ class NewtonForm(forms.Form):
     Nmax = forms.IntegerField(label='Nmax', required=True)
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
+
 class NewtonPageView(TemplateView):
     template_name = 'newton.html'
 
@@ -352,34 +354,39 @@ class NewtonPageView(TemplateView):
                 fant = f.subs(x, xant)
                 E = 1000
                 cont = 0
+                iteraciones = []
 
                 while E > tol and cont < Nmax:
                     xact = xant - fant / (sp.diff(f, x).subs(x, xant))
                     fact = f.subs(x, xant)
                     E = abs(xact - xant)
                     cont += 1
+                    iteraciones.append((cont, float(xant), float(xact), float(fact), float(E)))
                     xant = xact
                     fant = fact
 
-                return [float(xact), cont, float(E)]
+                return [float(xact), cont, float(E)], iteraciones
 
-            result = Newton(f, x0, tol, Nmax)
-            
+            result, iteraciones = Newton(f, x0, tol, Nmax)
+
             if export:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_newton.txt"'
                 response.write(f"Raíz aproximada: {result[0]}\n")
                 response.write(f"Número de iteraciones: {result[1]}\n")
                 response.write(f"Error: {result[2]}\n")
+                response.write("Iteración\tXant\tXact\tf(Xact)\tError\n")
+                for row in iteraciones:
+                    response.write("\t".join(map(str, row)) + "\n")
                 return response
 
             context['result'] = result
+            context['iterations'] = iteraciones
             context['form'] = form
         else:
             context['form'] = form
 
         return render(request, self.template_name, context)
-    
     
 #---------SECANTE---------------------------------
 class SecanteForm(forms.Form):

@@ -16,4 +16,28 @@
     <p>Número de iteraciones: {{ result.1 }}</p>
     <p>Error: {{ result.2 }}</p>
 {% endif %}
+
+{% if iterations %}
+    <h2>Tabla de Resultados:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Iteración</th>
+                <th>Xant</th>
+                <th>Xact</th>
+                <th>f(Xact)</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in iterations %}
+                <tr>
+                    {% for item in row %}
+                        <td>{{ item }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
 {% endblock %}
