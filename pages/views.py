@@ -52,7 +52,6 @@ class HomePageView(TemplateView):
 class MetodosPageView(TemplateView):
     template_name = 'metodos.html'
 
-
 class NosotrosPageView(TemplateView):
     template_name = 'nosotros.html'
 
@@ -266,6 +265,125 @@ class ReglaFalsaPageView(TemplateView):
                     return ["Intervalo inadecuado"]
 
             result = ReglaF(xi, xs, tol, n, fun)
+
+            context['result'] = result
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+    
+#----------NEWTON-----------------------
+
+class NewtonForm(forms.Form):
+    x0 = forms.FloatField(label='X0', required=True)
+    tol = forms.FloatField(label='Tol', required=True)
+    Nmax = forms.IntegerField(label='Nmax', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+class NewtonPageView(TemplateView):
+    template_name = 'newton.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = NewtonForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = NewtonForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            x0 = form.cleaned_data['x0']
+            tol = form.cleaned_data['tol']
+            Nmax = form.cleaned_data['Nmax']
+            fun_str = form.cleaned_data['fun']
+
+            x = sp.symbols('x')
+            f = sp.sympify(fun_str)
+
+            def Newton(f, x0, tol, Nmax):
+                xant = x0
+                fant = f.subs(x, xant)
+                E = 1000
+                cont = 0
+
+                while E > tol and cont < Nmax:
+                    xact = xant - fant / (sp.diff(f, x).subs(x, xant))
+                    fact = f.subs(x, xant)
+                    E = abs(xact - xant)
+                    cont += 1
+                    xant = xact
+                    fant = fact
+
+                return [float(xact), cont, float(E)]
+
+            result = Newton(f, x0, tol, Nmax)
+
+            context['result'] = result
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+    
+    
+#---------SECANTE---------------------------------
+class SecanteForm(forms.Form):
+    x0 = forms.FloatField(label='X0', required=True)
+    x1 = forms.FloatField(label='X1', required=True)
+    tol = forms.FloatField(label='Tol', required=True)
+    n = forms.IntegerField(label='Niter', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    
+    
+class SecantePageView(TemplateView):
+    template_name = 'secante.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = SecanteForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = SecanteForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            x0 = form.cleaned_data['x0']
+            x1 = form.cleaned_data['x1']
+            tol = form.cleaned_data['tol']
+            n = form.cleaned_data['n']
+            fun_str = form.cleaned_data['fun']
+
+            x = sp.symbols('x')
+            f = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
+
+            def secante(x0, x1, tol, n, f):
+                fx0 = f(x0)
+                if fx0 == 0:
+                    return x0
+                else:
+                    fx1 = f(x1)
+                    i = 0
+                    error = tol + 1
+                    den = fx1 - fx0
+                    while error > tol and fx1 != 0 and den != 0 and i < n:
+                        x2 = x1 - ((fx1 * (x1 - x0)) / den)
+                        error = np.abs(x2 - x1)
+                        x0 = x1
+                        fx0 = fx1
+                        x1 = x2
+                        fx1 = f(x1)
+                        den = fx1 - fx0
+                        i += 1
+                    if fx1 == 0:
+                        return [x1, "Error de " + str(0)]
+                    elif error < tol:
+                        return [x1, "Error de " + str(error)]
+                    elif den == 0:
+                        return ["Posible raíz múltiple"]
+                    else:
+                        return [x1, "Fracasó en " + str(n) + " iteraciones"]
+
+            result = secante(x0, x1, tol, n, f)
 
             context['result'] = result
             context['form'] = form

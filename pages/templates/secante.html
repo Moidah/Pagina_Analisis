@@ -1,0 +1,18 @@
+{% extends 'pages/base.html' %}
+
+{% block title %}Método de la Secante{% endblock %}
+
+{% block content %}
+<h1>Método de la Secante</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Calcular</button>
+</form>
+
+{% if result %}
+    <h2>Resultado:</h2>
+    <p>Raíz aproximada: {{ result.0 }}</p>
+    <p>{{ result.1 }}</p>
+{% endif %}
+{% endblock %}
