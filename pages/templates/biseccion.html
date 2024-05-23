@@ -1,4 +1,3 @@
-<!-- pages/templates/pages/biseccion.html -->
 {% extends 'pages/base.html' %}
 
 {% block title %}Método de Bisección{% endblock %}
@@ -15,23 +14,28 @@
 {% if result %}
     <h2>Resultado:</h2>
     <p>{{ result }}</p>
+{% endif %}
 
-    <h2>Detalles de las Iteraciones:</h2>
+{% if iterations %}
+    <h2>Tabla de Resultados:</h2>
     <table>
         <thead>
             <tr>
                 <th>Iteración</th>
-                <th>Fm</th>
+                <th>Xi</th>
+                <th>Xs</th>
+                <th>Xm</th>
+                <th>f(Xm)</th>
                 <th>Error</th>
             </tr>
         </thead>
         <tbody>
-            {% for fm_value, error_value in iterations %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ fm_value }}</td>
-                <td>{{ error_value }}</td>
-            </tr>
+            {% for row in iterations %}
+                <tr>
+                    {% for item in row %}
+                        <td>{{ item }}</td>
+                    {% endfor %}
+                </tr>
             {% endfor %}
         </tbody>
     </table>

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, HttpResponse
 from django import forms
 from django.views.generic import TemplateView
 import plotly.graph_objs as go
@@ -64,6 +64,7 @@ class BiseccionForm(forms.Form):
     tol = forms.FloatField(label='Tol', required=True)
     niter = forms.IntegerField(label='Niter', required=True)
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
     
 class BiseccionPageView(TemplateView):
     template_name = 'biseccion.html'
@@ -82,29 +83,32 @@ class BiseccionPageView(TemplateView):
             tol = form.cleaned_data['tol']
             niter = form.cleaned_data['niter']
             fun = form.cleaned_data['fun']
+            export = form.cleaned_data['export']
 
             x = sp.symbols('x')
             fi = sp.sympify(fun).subs(x, xi)
             fs = sp.sympify(fun).subs(x, xs)
-            fm = []
-            E = []
+            iterations = []
 
             if fi == 0:
                 s = xi
-                E.append(0)
+                E = 0
                 result = f"{xi} es raíz de f(x)"
             elif fs == 0:
                 s = xs
-                E.append(0)
+                E = 0
                 result = f"{xs} es raíz de f(x)"
             elif fs * fi < 0:
                 c = 0
                 Xm = (xi + xs) / 2
                 fe = sp.sympify(fun).subs(x, Xm)
-                fm.append(fe)
-                E.append(100)
+                fm = [fe]
+                E = [100]
 
                 while E[c] > tol and fe != 0 and c < niter:
+                    row = [c + 1, xi, xs, Xm, fe, E[c]]
+                    iterations.append(row)
+
                     if fi * fe < 0:
                         xs = Xm
                         fs = sp.sympify(fun).subs(x, xs)
@@ -120,6 +124,9 @@ class BiseccionPageView(TemplateView):
                     E.append(Error)
                     c += 1
 
+                row = [c + 1, xi, xs, Xm, fe, Error]
+                iterations.append(row)
+
                 if fe == 0:
                     s = Xm
                     result = f"{Xm} es raíz de f(x)"
@@ -131,8 +138,17 @@ class BiseccionPageView(TemplateView):
             else:
                 result = "El intervalo es inadecuado"
 
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_biseccion.txt"'
+                response.write(f"Resultado: {result}\n")
+                response.write("Iteración\tXi\tXs\tXm\tf(Xm)\tError\n")
+                for row in iterations:
+                    response.write("\t".join(map(str, row)) + "\n")
+                return response
+
             context['result'] = result
-            context['iterations'] = list(zip(fm, E))
+            context['iterations'] = iterations
             context['form'] = form
         else:
             context['form'] = form
@@ -145,6 +161,7 @@ class PuntoFijoForm(forms.Form):
     tol = forms.FloatField(label='Tol', required=True)
     Nmax = forms.IntegerField(label='Nmax', required=True)
     g = forms.CharField(label='Function g(x)', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función g(x)'}))
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
     
 class PuntoFijoPageView(TemplateView):
     template_name = 'puntofijo.html'
@@ -162,29 +179,28 @@ class PuntoFijoPageView(TemplateView):
             tol = form.cleaned_data['tol']
             Nmax = form.cleaned_data['Nmax']
             g_str = form.cleaned_data['g']
+            export = form.cleaned_data['export']
 
             x = sp.symbols('x')
             g = sp.sympify(g_str)
-            f = (x)**2 -100
+            f = (x)**2 - 100
 
             def Cre_o_Decre(f, x0):
                 return sp.diff(f, x).subs(x, x0) > 0
 
             def PuntoFijo(g, x0, tol, Nmax):
-                
-                #Inicialización
+                # Inicialización
                 xant = x0
                 E = 1000
                 cont = 0
                 iteraciones = []
                 
-                
-                #Ciclo
+                # Ciclo
                 while E > tol and cont < Nmax:
                     xact = g.subs(x, xant)
                     E = abs(xact - xant)
                     cont += 1
-                    iteraciones.append((cont, xact, E))
+                    iteraciones.append((cont, xant, xact, E))
                     xant = xact
 
                 return [xact, cont, E], iteraciones
@@ -192,6 +208,16 @@ class PuntoFijoPageView(TemplateView):
             creciente = Cre_o_Decre(f, x0)
             (xact, cont, E), iteraciones = PuntoFijo(g, x0, tol, Nmax)
             result = f"Convergió a {xact} con una tolerancia de {tol}" if E < tol else f"No convergió después de {Nmax} iteraciones"
+
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_puntofijo.txt"'
+                response.write(f"{context['creciente']}\n")
+                response.write(f"Resultado: {result}\n")
+                response.write("Iteración\tXant\tXact\tError\n")
+                for row in iteraciones:
+                    response.write("\t".join(map(str, row)) + "\n")
+                return response
 
             context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
             context['result'] = result
@@ -209,7 +235,9 @@ class ReglaFalsaForm(forms.Form):
     tol = forms.FloatField(label='Tol', required=True)
     n = forms.IntegerField(label='Niter', required=True)
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
     
+
 class ReglaFalsaPageView(TemplateView):
     template_name = 'reglafalsa.html'
 
@@ -227,6 +255,7 @@ class ReglaFalsaPageView(TemplateView):
             tol = form.cleaned_data['tol']
             n = form.cleaned_data['n']
             fun_str = form.cleaned_data['fun']
+            export = form.cleaned_data['export']
 
             x = sp.symbols('x')
             fun = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
@@ -234,39 +263,55 @@ class ReglaFalsaPageView(TemplateView):
             def ReglaF(xi, xs, tol, n, f):
                 fxi = f(xi)
                 fxs = f(xs)
-                if fxi == 0: 
-                    return xi 
+                table = []
+                if fxi == 0:
+                    return xi, table
                 elif fxs == 0:
-                    return xs
-                elif fxi * fxs < 0: 
+                    return xs, table
+                elif fxi * fxs < 0:
                     xm = xi - ((fxi * (xs - xi))) / (fxs - fxi)
                     fxm = f(xm)
-                    i = 1 
-                    error = tol + 1 
+                    i = 1
+                    error = tol + 1
                     while error > tol and fxm != 0 and i < n:
+                        row = [i, xi, xs, xm, fxm, error]
+                        table.append(row)
                         if fxi * fxm < 0:
                             xs = xm
                             fxs = fxm
                         else:
                             xi = xm
                             fxi = fxm
-                        xaux = xm 
+                        xaux = xm
                         xm = xi - ((fxi * (xs - xi)) / (fxs - fxi))
                         fxm = f(xm)
                         error = np.abs(xm - xaux)
                         i += 1
+                    row = [i, xi, xs, xm, fxm, error]
+                    table.append(row)
                     if fxm == 0:
-                        return [xm, "Error de " + str(0)]
+                        return [xm, "Error de " + str(0)], table
                     elif error < tol:
-                        return [xm, "Error de " + str(error)]
+                        return [xm, "Error de " + str(error)], table
                     else:
-                        return ["Fracasó en " + str(n) + " iteraciones"]
+                        return ["Fracasó en " + str(n) + " iteraciones"], table
                 else:
-                    return ["Intervalo inadecuado"]
+                    return ["Intervalo inadecuado"], table
 
-            result = ReglaF(xi, xs, tol, n, fun)
+            result, table = ReglaF(xi, xs, tol, n, fun)
+
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_reglafalsa.txt"'
+                response.write(f"Raíz aproximada: {result[0]}\n")
+                response.write(f"{result[1]}\n")
+                response.write("Iteración\tXi\tXs\tXm\tf(Xm)\tError\n")
+                for row in table:
+                    response.write("\t".join(map(str, row)) + "\n")
+                return response
 
             context['result'] = result
+            context['table'] = table
             context['form'] = form
         else:
             context['form'] = form
@@ -280,6 +325,7 @@ class NewtonForm(forms.Form):
     tol = forms.FloatField(label='Tol', required=True)
     Nmax = forms.IntegerField(label='Nmax', required=True)
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
 class NewtonPageView(TemplateView):
     template_name = 'newton.html'
 
@@ -296,6 +342,7 @@ class NewtonPageView(TemplateView):
             tol = form.cleaned_data['tol']
             Nmax = form.cleaned_data['Nmax']
             fun_str = form.cleaned_data['fun']
+            export = form.cleaned_data['export']
 
             x = sp.symbols('x')
             f = sp.sympify(fun_str)
@@ -317,6 +364,14 @@ class NewtonPageView(TemplateView):
                 return [float(xact), cont, float(E)]
 
             result = Newton(f, x0, tol, Nmax)
+            
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_newton.txt"'
+                response.write(f"Raíz aproximada: {result[0]}\n")
+                response.write(f"Número de iteraciones: {result[1]}\n")
+                response.write(f"Error: {result[2]}\n")
+                return response
 
             context['result'] = result
             context['form'] = form
@@ -333,7 +388,7 @@ class SecanteForm(forms.Form):
     tol = forms.FloatField(label='Tol', required=True)
     n = forms.IntegerField(label='Niter', required=True)
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
-    
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
     
 class SecantePageView(TemplateView):
     template_name = 'secante.html'
@@ -352,6 +407,7 @@ class SecantePageView(TemplateView):
             tol = form.cleaned_data['tol']
             n = form.cleaned_data['n']
             fun_str = form.cleaned_data['fun']
+            export = form.cleaned_data['export']
 
             x = sp.symbols('x')
             f = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
@@ -384,6 +440,13 @@ class SecantePageView(TemplateView):
                         return [x1, "Fracasó en " + str(n) + " iteraciones"]
 
             result = secante(x0, x1, tol, n, f)
+            
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_secante.txt"'
+                response.write(f"Raíz aproximada: {result[0]}\n")
+                response.write(f"{result[1]}\n")
+                return response
 
             context['result'] = result
             context['form'] = form
@@ -402,7 +465,7 @@ class RaicesMultiplesForm(forms.Form):
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
     deriv1 = forms.CharField(label='First Derivative', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la primera derivada en términos de x'}))
     deriv2 = forms.CharField(label='Second Derivative', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la segunda derivada en términos de x'}))
-
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
 class RaicesMultiplesPageView(TemplateView):
     template_name = 'raicesmultiples.html'
 
@@ -421,6 +484,7 @@ class RaicesMultiplesPageView(TemplateView):
             fun_str = form.cleaned_data['fun']
             deriv1_str = form.cleaned_data['deriv1']
             deriv2_str = form.cleaned_data['deriv2']
+            export = form.cleaned_data['export']
 
             x = sp.symbols('x')
             f = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
@@ -455,6 +519,13 @@ class RaicesMultiplesPageView(TemplateView):
                         return [x0, "Fracasó en " + str(n) + " iteraciones"]
 
             result = RaicesMul(x0, tol, n, f, derivada1, derivada2)
+            
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_raices_multiples.txt"'
+                response.write(f"Raíz aproximada: {result[0]}\n")
+                response.write(f"{result[1]}\n")
+                return response
 
             context['result'] = result
             context['form'] = form

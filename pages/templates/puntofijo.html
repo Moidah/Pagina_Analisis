@@ -13,24 +13,26 @@
 {% if result %}
     <h2>Resultado:</h2>
     <p>{{ result }}</p>
-    <p>{{ creciente }}</p>
+{% endif %}
 
-    <h2>Detalles de las Iteraciones:</h2>
+{% if iterations %}
+    <h2>Tabla de Resultados:</h2>
     <table>
         <thead>
             <tr>
                 <th>Iteración</th>
-                <th>x</th>
+                <th>Xant</th>
+                <th>Xact</th>
                 <th>Error</th>
             </tr>
         </thead>
         <tbody>
-            {% for iter_num, xk, error in iterations %}
-            <tr>
-                <td>{{ iter_num }}</td>
-                <td>{{ xk }}</td>
-                <td>{{ error }}</td>
-            </tr>
+            {% for row in iterations %}
+                <tr>
+                    {% for item in row %}
+                        <td>{{ item }}</td>
+                    {% endfor %}
+                </tr>
             {% endfor %}
         </tbody>
     </table>

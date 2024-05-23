@@ -12,6 +12,33 @@
 
 {% if result %}
     <h2>Resultado:</h2>
-    <p>{{ result }}</p>
+    <p>Raíz aproximada: {{ result.0 }}</p>
+    <p>{{ result.1 }}</p>
+{% endif %}
+
+{% if table %}
+    <h2>Tabla de Resultados:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Iteración</th>
+                <th>Xi</th>
+                <th>Xs</th>
+                <th>Xm</th>
+                <th>f(Xm)</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table %}
+                <tr>
+                    {% for item in row %}
+                        <td>{{ item }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endif %}
 {% endblock %}
+
