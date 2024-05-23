@@ -58,7 +58,7 @@ class NosotrosPageView(TemplateView):
 
 
 #-------------------------------------METODOS DESDE AQUI-------------------------------------------------------------------------
-#------BISECCION-------------
+#----------BISECCION----------------------
 class BiseccionForm(forms.Form):
     xi = forms.FloatField(label='Xi', required=True)
     xs = forms.FloatField(label='Xs', required=True)
@@ -197,6 +197,77 @@ class PuntoFijoPageView(TemplateView):
             context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
             context['result'] = result
             context['iterations'] = iteraciones
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+
+#---------Regla_Falsa-------------------
+class ReglaFalsaForm(forms.Form):
+    xi = forms.FloatField(label='Xi', required=True)
+    xs = forms.FloatField(label='Xs', required=True)
+    tol = forms.FloatField(label='Tol', required=True)
+    n = forms.IntegerField(label='Niter', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    
+class ReglaFalsaPageView(TemplateView):
+    template_name = 'reglafalsa.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = ReglaFalsaForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = ReglaFalsaForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            xi = form.cleaned_data['xi']
+            xs = form.cleaned_data['xs']
+            tol = form.cleaned_data['tol']
+            n = form.cleaned_data['n']
+            fun_str = form.cleaned_data['fun']
+
+            x = sp.symbols('x')
+            fun = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
+
+            def ReglaF(xi, xs, tol, n, f):
+                fxi = f(xi)
+                fxs = f(xs)
+                if fxi == 0: 
+                    return xi 
+                elif fxs == 0:
+                    return xs
+                elif fxi * fxs < 0: 
+                    xm = xi - ((fxi * (xs - xi))) / (fxs - fxi)
+                    fxm = f(xm)
+                    i = 1 
+                    error = tol + 1 
+                    while error > tol and fxm != 0 and i < n:
+                        if fxi * fxm < 0:
+                            xs = xm
+                            fxs = fxm
+                        else:
+                            xi = xm
+                            fxi = fxm
+                        xaux = xm 
+                        xm = xi - ((fxi * (xs - xi)) / (fxs - fxi))
+                        fxm = f(xm)
+                        error = np.abs(xm - xaux)
+                        i += 1
+                    if fxm == 0:
+                        return [xm, "Error de " + str(0)]
+                    elif error < tol:
+                        return [xm, "Error de " + str(error)]
+                    else:
+                        return ["Fracasó en " + str(n) + " iteraciones"]
+                else:
+                    return ["Intervalo inadecuado"]
+
+            result = ReglaF(xi, xs, tol, n, fun)
+
+            context['result'] = result
             context['form'] = form
         else:
             context['form'] = form
