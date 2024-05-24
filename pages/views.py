@@ -595,15 +595,17 @@ class GaussSeidelPageView(TemplateView):
                 C = np.matmul(inv(D - L), b)
                 xn = np.matmul(Tg, x0) + C
                 error = np.amax(abs(xn - (np.dot(Tg, xn) + C)))
+                error = np.amax(error)
                 iter = 0
                 iteraciones = []
 
-                while error > tol and iter < numIter:
+                while ((error > tol) and (iter < numIter)):
                     nuevo = np.matmul(Tg, xn) + C
                     error = np.amax(abs(nuevo - xn))
+                    error = np.amax(error)
                     iteraciones.append((iter, xn.flatten().tolist(), nuevo.flatten().tolist(), error))
                     xn = nuevo
-                    iter += 1
+                    iter = iter + 1
 
                 iteraciones.append((iter, xn.flatten().tolist(), nuevo.flatten().tolist(), error))
                 return xn.flatten().tolist(), iteraciones
