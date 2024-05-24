@@ -1,0 +1,65 @@
+{% extends 'pages/base.html' %}
+
+{% block title %}Método de Gauss-Seidel{% endblock %}
+
+{% block content %}
+<h1>Método de Gauss-Seidel</h1>
+<form method="post" id="matrixForm">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="button" onclick="generateMatrix()">Generar Matriz y Vector</button>
+    <div id="matrixInputs"></div>
+    <div id="vectorInputs"></div>
+    <button type="submit">Calcular</button>
+</form>
+
+{% if result %}
+    <h2>Resultado:</h2>
+    <p>Solución aproximada: {{ result }}</p>
+{% endif %}
+
+{% if iterations %}
+    <h2>Tabla de Resultados:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Iteración</th>
+                <th>Xanterior</th>
+                <th>Xnuevo</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in iterations %}
+                <tr>
+                    <td>{{ row.0 }}</td>
+                    <td>{{ row.1 }}</td>
+                    <td>{{ row.2 }}</td>
+                    <td>{{ row.3 }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
+<script>
+function generateMatrix() {
+    const rows = document.getElementById('id_rows').value;
+    const cols = document.getElementById('id_cols').value;
+
+    let matrixInputs = '';
+    let vectorInputs = '';
+
+    for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+            matrixInputs += `<input type="text" name="A_${i}_${j}" placeholder="A[${i}][${j}]" required>`;
+        }
+        matrixInputs += '<br>';
+        vectorInputs += `<input type="text" name="b_${i}" placeholder="b[${i}]" required><br>`;
+    }
+
+    document.getElementById('matrixInputs').innerHTML = matrixInputs;
+    document.getElementById('vectorInputs').innerHTML = vectorInputs;
+}
+</script>
+{% endblock %}

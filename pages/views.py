@@ -4,6 +4,7 @@ from django.views.generic import TemplateView
 import plotly.graph_objs as go
 from plotly.offline import plot
 import numpy as np
+from numpy.linalg import inv
 import sympy as sp
 
 class FunctionForm(forms.Form):
@@ -540,3 +541,91 @@ class RaicesMultiplesPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+    
+    
+#------------------GaussSeidel----------------------------- 
+class GaussSeidelForm(forms.Form):
+    rows = forms.IntegerField(label='Número de filas (n)', min_value=1, required=True)
+    cols = forms.IntegerField(label='Número de columnas (n)', min_value=1, required=True)
+    tol = forms.FloatField(label='Tolerancia', required=True)
+    numIter = forms.IntegerField(label='Número máximo de iteraciones', required=True)
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
+    A = forms.CharField(widget=forms.HiddenInput(), required=False)
+    b = forms.CharField(widget=forms.HiddenInput(), required=False)
+    
+class GaussSeidelPageView(TemplateView):
+    template_name = 'gaussseidel.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = GaussSeidelForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = GaussSeidelForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            rows = form.cleaned_data['rows']
+            cols = form.cleaned_data['cols']
+            tol = form.cleaned_data['tol']
+            numIter = form.cleaned_data['numIter']
+            export = form.cleaned_data['export']
+
+            
+            A = [[float(request.POST[f'A_{i}_{j}']) for j in range(cols)] for i in range(rows)]
+            b = [float(request.POST[f'b_{i}']) for i in range(rows)]
+
+            A = np.array(A)
+            b = np.array(b).reshape(-1, 1)
+
+            def GaussSeidel(A, b, tol, numIter):
+                n = np.size(A, 0)
+                L = -np.tril(A, -1)
+                U = -np.triu(A, 1)
+                D = A + L + U
+                x0 = np.zeros([n, 1])
+                Tg = np.matmul(inv(D - L), U)
+                autoval, autovec = np.linalg.eig(Tg)
+                autoval = abs(autoval)
+
+                for lam in autoval:
+                    if lam >= 1:
+                        return ["El método no pudo converger de acuerdo a los parámetros ingresados"], []
+
+                C = np.matmul(inv(D - L), b)
+                xn = np.matmul(Tg, x0) + C
+                error = np.amax(abs(xn - (np.dot(Tg, xn) + C)))
+                iter = 0
+                iteraciones = []
+
+                while error > tol and iter < numIter:
+                    nuevo = np.matmul(Tg, xn) + C
+                    error = np.amax(abs(nuevo - xn))
+                    iteraciones.append((iter, xn.flatten().tolist(), nuevo.flatten().tolist(), error))
+                    xn = nuevo
+                    iter += 1
+
+                iteraciones.append((iter, xn.flatten().tolist(), nuevo.flatten().tolist(), error))
+                return xn.flatten().tolist(), iteraciones
+
+            result, iteraciones = GaussSeidel(A, b, tol, numIter)
+
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_gaussseidel.txt"'
+                response.write(f"Solución aproximada: {result}\n")
+                response.write("Iteración\tXanterior\tXnuevo\tError\n")
+                for row in iteraciones:
+                    iter_num, xant, xnuevo, err = row
+                    response.write(f"{iter_num}\t{xant}\t{xnuevo}\t{err}\n")
+                return response
+
+            context['result'] = result
+            context['iterations'] = iteraciones
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+    
+    
