@@ -7,9 +7,10 @@ import numpy as np
 from numpy.linalg import inv
 import sympy as sp
 
+#-------------Para ingresar todos lo parametros de los metodos--------------------------
 class FunctionForm(forms.Form):
     function = forms.CharField(label='Función', widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
-
+#---------------------------------------------------------------------------------------
 class HomePageView(TemplateView):
     template_name = 'home.html'
 
@@ -239,7 +240,6 @@ class ReglaFalsaForm(forms.Form):
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
     
-
 class ReglaFalsaPageView(TemplateView):
     template_name = 'reglafalsa.html'
 
@@ -319,9 +319,8 @@ class ReglaFalsaPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
-    
-#----------NEWTON-----------------------
 
+#----------NEWTON----------------------
 class NewtonForm(forms.Form):
     x0 = forms.FloatField(label='X0', required=True)
     tol = forms.FloatField(label='Tol', required=True)
@@ -389,6 +388,7 @@ class NewtonPageView(TemplateView):
 
         return render(request, self.template_name, context)
     
+
 #---------SECANTE---------------------------------
 class SecanteForm(forms.Form):
     x0 = forms.FloatField(label='X0', required=True)
