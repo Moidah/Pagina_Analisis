@@ -1,10 +1,9 @@
 {% extends 'pages/base.html' %}
 
-{% block title %}Método de Bisección{% endblock %}
+{% block title %}Método de Punto Fijo{% endblock %}
 
 {% block content %}
-<h1>Método de Bisección</h1>
-<p>Esta es la página del Método de Bisección.  se ingresa el valor inicial y final del intervalo (xi, xs), la tolerancia del error (Tol) y el màximo nùmero de iteraciones (niter).</p>
+<h1>Método de Punto Fijo</h1>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
@@ -22,10 +21,8 @@
         <thead>
             <tr>
                 <th>Iteración</th>
-                <th>Xi</th>
-                <th>Xs</th>
-                <th>Xm</th>
-                <th>f(Xm)</th>
+                <th>Xant</th>
+                <th>Xact</th>
                 <th>Error</th>
             </tr>
         </thead>

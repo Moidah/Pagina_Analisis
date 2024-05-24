@@ -7,10 +7,12 @@
 <p>Seleccione un método:</p>
 <div class="buttons-container">
     <a class="btn" href="{% url 'biseccion' %}">Método de Bisección</a>
-    <button class="btn">Método de Punto Fijo</button>
-    <button class="btn">Método de Regla Falsa</button>
-    <button class="btn">Método de Newton</button>
-    <button class="btn">Método Secante</button>
-    <button class="btn">Método de Raíces Múltiples</button>
+    <a class="btn" href="{% url 'puntofijo' %}">Método de Punto Fijo</a>
+    <a class="btn" href="{% url 'reglafalsa' %}">Método de la Regla Falsa</a>
+    <a class="btn" href="{% url 'newton' %}">Método de Newton</a>
+    <a class="btn" href="{% url 'secante' %}">Método de la Secante</a>
+    <a class="btn" href="{% url 'raicesmultiples' %}">Método de Raíces Múltiples</a>
+    <a class="btn" href="{% url 'gaussseidel' %}">Método de Gauss-Seidel</a>
+
 </div>
 {% endblock %}
