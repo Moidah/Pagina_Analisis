@@ -4,6 +4,7 @@
 
 {% block content %}
 <h1>Métodos</h1>
+<h2> Metodos del capitulo 1 </h2>
 <p>Seleccione un método:</p>
 <div class="buttons-container">
     <a class="btn" href="{% url 'biseccion' %}">Método de Bisección</a>
@@ -12,7 +13,10 @@
     <a class="btn" href="{% url 'newton' %}">Método de Newton</a>
     <a class="btn" href="{% url 'secante' %}">Método de la Secante</a>
     <a class="btn" href="{% url 'raicesmultiples' %}">Método de Raíces Múltiples</a>
+</div>
+<h2> Metodos del capitulo 2 </h2>
+<p>Seleccione un método:</p>
+<div class="buttons-container">
     <a class="btn" href="{% url 'gaussseidel' %}">Método de Gauss-Seidel</a>
-
 </div>
 {% endblock %}
