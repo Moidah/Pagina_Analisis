@@ -358,7 +358,7 @@ class NewtonPageView(TemplateView):
 
                 while E > tol and cont < Nmax:
                     xact = xant - fant / (sp.diff(f, x).subs(x, xant))
-                    fact = f.subs(x, xant)
+                    fact = f.subs(x, xact)
                     E = abs(xact - xant)
                     cont += 1
                     iteraciones.append((cont, float(xant), float(xact), float(fact), float(E)))
@@ -629,5 +629,4 @@ class GaussSeidelPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
-    
     
