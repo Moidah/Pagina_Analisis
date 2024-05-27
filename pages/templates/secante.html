@@ -10,9 +10,38 @@
     <button type="submit">Calcular</button>
 </form>
 
+{% if error %}
+    <div class="error">{{ error }}</div>
+{% endif %}
+
 {% if result %}
     <h2>Resultado:</h2>
-    <p>Raíz aproximada: {{ result.0 }}</p>
-    <p>{{ result.1 }}</p>
+    <p>Raíz aproximada: {{ result }}</p>
+{% endif %}
+
+{% if table %}
+    <h2>Tabla de Resultados:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Iteración</th>
+                <th>X0</th>
+                <th>X1</th>
+                <th>X2</th>
+                <th>f(X1)</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table %}
+                <tr>
+                    {% for item in row %}
+                        <td>{{ item }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endif %}
 {% endblock %}
+

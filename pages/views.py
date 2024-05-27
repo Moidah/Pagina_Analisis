@@ -410,53 +410,70 @@ class SecantePageView(TemplateView):
         form = SecanteForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            x0 = form.cleaned_data['x0']
-            x1 = form.cleaned_data['x1']
-            tol = form.cleaned_data['tol']
-            n = form.cleaned_data['n']
-            fun_str = form.cleaned_data['fun']
-            export = form.cleaned_data['export']
+            try:
+                x0 = float(form.cleaned_data['x0'])
+                x1 = float(form.cleaned_data['x1'])
+                tol = float(form.cleaned_data['tol'])
+                n = int(form.cleaned_data['n'])
+                fun_str = form.cleaned_data['fun']
+                export = form.cleaned_data['export']
+            except ValueError:
+                context['error'] = "Asegúrate de que los valores numéricos están bien formateados."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
             x = sp.symbols('x')
-            f = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
+            try:
+                f = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
+            except sp.SympifyError:
+                context['error'] = "Error al parsear las expresiones. Asegúrate de usar la sintaxis correcta."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
             def secante(x0, x1, tol, n, f):
                 fx0 = f(x0)
                 if fx0 == 0:
-                    return x0
+                    return x0, []
                 else:
                     fx1 = f(x1)
                     i = 0
                     error = tol + 1
                     den = fx1 - fx0
+                    table = []
                     while error > tol and fx1 != 0 and den != 0 and i < n:
                         x2 = x1 - ((fx1 * (x1 - x0)) / den)
                         error = np.abs(x2 - x1)
+                        table.append((i, x0, x1, x2, fx1, error))
                         x0 = x1
                         fx0 = fx1
                         x1 = x2
                         fx1 = f(x1)
                         den = fx1 - fx0
                         i += 1
+                    table.append((i, x0, x1, x2, fx1, error))
                     if fx1 == 0:
-                        return [x1, "Error de " + str(0)]
+                        return [x1, "Error de " + str(0)], table
                     elif error < tol:
-                        return [x1, "Error de " + str(error)]
+                        return [x1, "Error de " + str(error)], table
                     elif den == 0:
-                        return ["Posible raíz múltiple"]
+                        return ["Posible raíz múltiple"], table
                     else:
-                        return [x1, "Fracasó en " + str(n) + " iteraciones"]
+                        return [x1, "Fracasó en " + str(n) + " iteraciones"], table
 
-            result = secante(x0, x1, tol, n, f)
-            
+            result, table = secante(x0, x1, tol, n, f)
+
             if export:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_secante.txt"'
                 response.write(f"Raíz aproximada: {result[0]}\n")
                 response.write(f"{result[1]}\n")
+                response.write("Iteración\tX0\tX1\tX2\tf(X1)\tError\n")
+                for row in table:
+                    response.write("\t".join(map(str, row)) + "\n")
                 return response
 
             context['result'] = result
+            context['table'] = table
             context['form'] = form
         else:
             context['form'] = form
@@ -486,56 +503,71 @@ class RaicesMultiplesPageView(TemplateView):
         form = RaicesMultiplesForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            x0 = form.cleaned_data['x0']
-            tol = form.cleaned_data['tol']
-            n = form.cleaned_data['n']
-            fun_str = form.cleaned_data['fun']
-            deriv1_str = form.cleaned_data['deriv1']
-            deriv2_str = form.cleaned_data['deriv2']
-            export = form.cleaned_data['export']
+            try:
+                x0 = float(form.cleaned_data['x0'])
+                tol = float(form.cleaned_data['tol'])
+                n = int(form.cleaned_data['n'])
+                fun_str = form.cleaned_data['fun']
+                deriv1_str = form.cleaned_data['deriv1']
+                deriv2_str = form.cleaned_data['deriv2']
+                export = form.cleaned_data['export']
+            except ValueError:
+                context['error'] = "Asegúrate de que los valores numéricos están bien formateados."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
             x = sp.symbols('x')
-            f = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
-            derivada1 = sp.lambdify(x, sp.sympify(deriv1_str), 'numpy')
-            derivada2 = sp.lambdify(x, sp.sympify(deriv2_str), 'numpy')
+            try:
+                f = sp.sympify(fun_str.replace('^', '**'))
+                deriv1 = sp.sympify(deriv1_str.replace('^', '**'))
+                deriv2 = sp.sympify(deriv2_str.replace('^', '**'))
+            except sp.SympifyError:
+                context['error'] = "Error al parsear las expresiones. Asegúrate de usar la sintaxis correcta."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
-            def RaicesMul(x0, tol, n, f, derivada1, derivada2):
-                fx0 = f(x0)
+            def RaicesMul(x0, tol, n, f, deriv1, deriv2):
+                fx0 = f.subs(x, x0)
+                table = []
                 if fx0 == 0:
-                    return x0
+                    return x0, table
                 else:
-                    fx0 = f(x0)
-                    fpx0 = derivada1(x0)
-                    fppx0 = derivada2(x0)
-                    i = 0
+                    fpx0 = deriv1.subs(x, x0)
+                    fppx0 = deriv2.subs(x, x0)
+                    iter = 0
                     error = tol + 1
                     den = (fpx0**2) - (fx0 * fppx0)
-                    while error > tol and fx0 != 0 and den != 0 and i < n:
-                        x1 = x0 - ((fx0 * fpx0) / den)
-                        fx0 = f(x1)
-                        fpx0 = derivada1(x1)
-                        fppx0 = derivada2(x1)
+                    while error > tol and fx0 != 0 and den != 0 and iter < n:
+                        x1 = x0 - (fx0 * fpx0) / den
+                        fx0 = f.subs(x, x1)
+                        fpx0 = deriv1.subs(x, x1)
+                        fppx0 = deriv2.subs(x, x1)
                         den = (fpx0**2) - (fx0 * fppx0)
-                        error = np.abs(x1 - x0)
+                        error = abs(x1 - x0)
+                        table.append((iter, x0, x1, fx0, error))
                         x0 = x1
-                        i += 1
+                        iter += 1
+                    table.append((iter, x0, x1, fx0, error))
                     if fx0 == 0:
-                        return x0
+                        return x0, table
                     elif error < tol:
-                        return [x0, "Error de " + str(error)]
+                        return x0, table
                     else:
-                        return [x0, "Fracasó en " + str(n) + " iteraciones"]
+                        return x0, table
 
-            result = RaicesMul(x0, tol, n, f, derivada1, derivada2)
-            
+            result, table = RaicesMul(x0, tol, n, f, deriv1, deriv2)
+
             if export:
                 response = HttpResponse(content_type='text/plain')
-                response['Content-Disposition'] = 'attachment; filename="resultados_raices_multiples.txt"'
-                response.write(f"Raíz aproximada: {result[0]}\n")
-                response.write(f"{result[1]}\n")
+                response['Content-Disposition'] = 'attachment; filename="resultados_raicesmultiples.txt"'
+                response.write(f"Raíz aproximada: {result}\n")
+                response.write("Iteración\tX0\tX1\tf(X1)\tError\n")
+                for row in table:
+                    response.write("\t".join(map(str, row)) + "\n")
                 return response
 
             context['result'] = result
+            context['table'] = table
             context['form'] = form
         else:
             context['form'] = form
