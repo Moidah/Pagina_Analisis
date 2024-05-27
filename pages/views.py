@@ -7,7 +7,7 @@ import numpy as np
 from numpy.linalg import inv
 import sympy as sp
 
-#-------------Para ingresar todos lo parametros de los metodos--------------------------
+#-------------Para ingresar todos los parametros de los metodos--------------------------
 class FunctionForm(forms.Form):
     function = forms.CharField(label='Función', widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
 #---------------------------------------------------------------------------------------
