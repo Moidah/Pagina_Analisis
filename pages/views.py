@@ -764,7 +764,7 @@ class SORPageView(TemplateView):
                 table = []
                 it = 0
                 t = tol + 1
-                table.append([it, x0.copy(), t])
+                table.append([it, x0.copy().tolist(), t])
                 while t > tol and it < niter:
                     it += 1
                     x_nuevo = np.zeros(n)
@@ -774,7 +774,7 @@ class SORPageView(TemplateView):
                         x_nuevo[j] = (1 - w) * x0[j] + w * x_nuevo[j]
                     t = max(abs(x0 - x_nuevo))
                     x0 = x_nuevo
-                    table.append([it, x0.copy(), t])
+                    table.append([it, x0.copy().tolist(), t])
                 return table
 
             iterations = sor(A, b, x0, n, tol, w)
@@ -832,10 +832,10 @@ class SORMatricialPageView(TemplateView):
                 x0[i] = float(request.POST.get(f'x0_{i}'))
 
             def sor_matricial(A, b, x0, n, tol, w):
-                table.field_names = ["Iteraciones", "Vector", "Tolerancia"]
+                table = []
                 it = 0
                 t = tol + 1
-                table.add_row([it, x0.copy(), t])
+                table.append([it, x0.copy().tolist(), t])
                 D = np.diag(np.diag(A))
                 L = (-1) * np.tril(A - D)
                 U = (-1) * np.triu(A - D)
@@ -846,19 +846,21 @@ class SORMatricialPageView(TemplateView):
                     x_nuevo = np.transpose(T @ np.transpose(x0) + C)
                     t = max(abs(x0 - x_nuevo))
                     x0 = x_nuevo
-                    table.add_row([it, x0.copy(), t])
-                return table, x0
+                    table.append([it, x0.copy().tolist(), t])
+                return table, x0.tolist()
 
-            table, result = sor_matricial(A, b, x0, n, tol, w)
+            iterations, result = sor_matricial(A, b, x0, n, tol, w)
 
             if form.cleaned_data['export']:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_sor_matricial.txt"'
-                response.write(table.get_string())
+                response.write("Iteración\tVector\tTolerancia\n")
+                for row in iterations:
+                    response.write(f"{row[0]}\t{row[1]}\t{row[2]}\n")
                 return response
 
             context['result'] = result
-            context['iterations'] = table
+            context['iterations'] = iterations
             context['form'] = form
         else:
             context['form'] = form
