@@ -234,13 +234,12 @@ class PuntoFijoPageView(TemplateView):
 
 #---------Regla_Falsa-------------------
 class ReglaFalsaForm(forms.Form):
-    xi = forms.FloatField(label='Xi', required=True)
-    xs = forms.FloatField(label='Xs', required=True)
-    tol = forms.FloatField(label='Tol', required=True)
-    n = forms.IntegerField(label='Niter', required=True)
-    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
-    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
-    
+    xi = forms.FloatField(label="Xi")
+    xs = forms.FloatField(label="Xs")
+    tol = forms.FloatField(label="Tolerancia")
+    n = forms.IntegerField(label="Número de Iteraciones")
+    fun = forms.CharField(label="Función", widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
 class ReglaFalsaPageView(TemplateView):
     template_name = 'reglafalsa.html'
 
@@ -261,60 +260,54 @@ class ReglaFalsaPageView(TemplateView):
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            fun = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
+            fun = sp.sympify(fun_str)
 
-            def ReglaF(xi, xs, tol, n, f):
-                fxi = f(xi)
-                fxs = f(xs)
-                table = []
-                if fxi == 0:
-                    return xi, table
-                elif fxs == 0:
-                    return xs, table
-                elif fxi * fxs < 0:
-                    xm = xi - ((fxi * (xs - xi))) / (fxs - fxi)
-                    fxm = f(xm)
-                    i = 1
-                    error = tol + 1
-                    while error > tol and fxm != 0 and i < n:
-                        row = [i, xi, xs, xm, fxm, error]
-                        table.append(row)
-                        if fxi * fxm < 0:
-                            xs = xm
-                            fxs = fxm
-                        else:
-                            xi = xm
-                            fxi = fxm
-                        xaux = xm
-                        xm = xi - ((fxi * (xs - xi)) / (fxs - fxi))
-                        fxm = f(xm)
-                        error = np.abs(xm - xaux)
-                        i += 1
-                    row = [i, xi, xs, xm, fxm, error]
-                    table.append(row)
-                    if fxm == 0:
-                        return [xm, "Error de " + str(0)], table
-                    elif error < tol:
-                        return [xm, "Error de " + str(error)], table
+            def regla_falsa(F, a, b, tol, max_iter=1000):
+                i = 0
+                fa = F.subs(x, a).evalf()
+                fb = F.subs(x, b).evalf()
+                c_0 = 0
+                c_1 = (a * fb - b * fa) / (fb - fa)
+                fc = F.subs(x, c_1).evalf()
+                err = abs(c_1 - c_0)
+                data = [[i, err, a, fa, b, fb, c_1, fc]]
+
+                while err > tol and i < max_iter:
+                    c_0 = c_1
+                    i += 1
+                    fa = F.subs(x, a).evalf()
+                    fb = F.subs(x, b).evalf()
+                    c_1 = a - (fa * (b - a)) / (fb - fa)
+                    fc = F.subs(x, c_1).evalf()
+
+                    if fa * fc < 0:
+                        b = c_1
+                        fb = fc
                     else:
-                        return ["Fracasó en " + str(n) + " iteraciones"], table
-                else:
-                    return ["Intervalo inadecuado"], table
+                        a = c_1
+                        fa = fc
 
-            result, table = ReglaF(xi, xs, tol, n, fun)
+                    err = abs(c_1 - c_0)
+                    data.append([i, err, a, fa, b, fb, c_1, fc])
+
+                if i == max_iter:
+                    print("Warning: Maximum number of iterations reached without convergence.")
+
+                return data
+
+            iterations = regla_falsa(fun, xi, xs, tol, n)
+            result = iterations[-1] if iterations else []
 
             if export:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_reglafalsa.txt"'
-                response.write(f"Raíz aproximada: {result[0]}\n")
-                response.write(f"{result[1]}\n")
-                response.write("Iteración\tXi\tXs\tXm\tf(Xm)\tError\n")
-                for row in table:
+                response.write("Iteración\tTolerancia\tA\tF(A)\tB\tF(B)\tC\tF(C)\n")
+                for row in iterations:
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
             context['result'] = result
-            context['table'] = table
+            context['iterations'] = iterations
             context['form'] = form
         else:
             context['form'] = form
@@ -887,18 +880,22 @@ class VandermondePageView(TemplateView):
         if form.is_valid():
             n = form.cleaned_data['n']
             xs = [float(request.POST.get(f'xs_{i}')) for i in range(n)]
-            y = np.zeros(n)
-
-            for i in range(n):
-                y[i] = float(request.POST.get(f'y_{i}'))
+            y = [float(request.POST.get(f'y_{i}')) for i in range(n)]
 
             def vandermonde(xs, y, n):
                 x = sp.symbols('x')
                 A = np.array([[i**j for j in range(n-1, -1, -1)] for i in xs])
-                C = np.linalg.solve(A, y)
+                C = np.linalg.inv(A) @ np.transpose(y)
                 C = C[::-1]
-                expr = sum(C[i] * x**i for i in range(n))
-                funcion = " + ".join([f"{C[i]}*x^{i}" for i in range(n)])
+                expr = 0
+                funcion = "F(x)="
+                for i in range(n-1, -1, -1):
+                    if i == 0:
+                        expr += C[i]
+                        funcion += str(C[i])
+                        break
+                    expr += C[i] * x**i
+                    funcion += str(C[i]) + "x^" + str(i) + "+"
                 return funcion, expr
 
             funcion, expr = vandermonde(xs, y, n)
@@ -935,23 +932,25 @@ class NewtonInterpolantePageView(TemplateView):
 
             def newton_interpolante(xs, y, n):
                 x = sp.symbols('x')
-                dif_div = np.zeros((n, n+1))
+                dif_div = np.zeros((n, n + 1))
                 dif_div[:, 0] = xs
                 dif_div[:, 1] = y
                 expr = 0
-                for i in range(n-1):
-                    for j in range(n-1):
+                for i in range(n - 1):
+                    for j in range(n - 1):
                         if i <= j:
-                            dif_div[j+1][i+2] = (dif_div[j+1][i+1] - dif_div[j][i+1]) / (dif_div[j+1][0] - dif_div[j+1-i-1][0])
+                            dif_div[j + 1][i + 2] = (dif_div[j + 1][i + 1] - dif_div[j][i + 1]) / (dif_div[j + 1][0] - dif_div[j + 1 - i - 1][0])
                 for i in range(n):
-                    aux = dif_div[i][i+1]
+                    aux = dif_div[i][i + 1]
                     for j in range(i):
                         aux *= (x - dif_div[j][0])
                     expr += aux
                 expr = sp.expand(expr)
-                return expr
+                funcion = f"F(x) = {expr}"
+                return funcion, expr
 
-            expr = newton_interpolante(xs, y, n)
+            funcion, expr = newton_interpolante(xs, y, n)
+            context['funcion'] = funcion
             context['expr'] = expr
             context['form'] = form
         else:

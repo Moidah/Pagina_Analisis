@@ -12,33 +12,45 @@
 
 {% if result %}
     <h2>Resultado:</h2>
-    <p>Raíz aproximada: {{ result.0 }}</p>
-    <p>{{ result.1 }}</p>
+    <p>Última Iteración: {{ result.0 }}</p>
+    <p>Tolerancia: {{ result.1 }}</p>
+    <p>A: {{ result.2 }}</p>
+    <p>F(A): {{ result.3 }}</p>
+    <p>B: {{ result.4 }}</p>
+    <p>F(B): {{ result.5 }}</p>
+    <p>C: {{ result.6 }}</p>
+    <p>F(C): {{ result.7 }}</p>
 {% endif %}
 
-{% if table %}
+{% if iterations %}
     <h2>Tabla de Resultados:</h2>
     <table>
         <thead>
             <tr>
                 <th>Iteración</th>
-                <th>Xi</th>
-                <th>Xs</th>
-                <th>Xm</th>
-                <th>f(Xm)</th>
-                <th>Error</th>
+                <th>Tolerancia</th>
+                <th>A</th>
+                <th>F(A)</th>
+                <th>B</th>
+                <th>F(B)</th>
+                <th>C</th>
+                <th>F(C)</th>
             </tr>
         </thead>
         <tbody>
-            {% for row in table %}
+            {% for row in iterations %}
                 <tr>
-                    {% for item in row %}
-                        <td>{{ item }}</td>
-                    {% endfor %}
+                    <td>{{ row.0 }}</td>
+                    <td>{{ row.1 }}</td>
+                    <td>{{ row.2 }}</td>
+                    <td>{{ row.3 }}</td>
+                    <td>{{ row.4 }}</td>
+                    <td>{{ row.5 }}</td>
+                    <td>{{ row.6 }}</td>
+                    <td>{{ row.7 }}</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 {% endif %}
 {% endblock %}
-

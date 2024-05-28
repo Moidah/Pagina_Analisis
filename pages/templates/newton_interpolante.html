@@ -4,54 +4,39 @@
 
 {% block content %}
 <h1>Método de Newton Interpolante</h1>
-<form method="post" id="newtonInterpolanteForm">
+<form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="button" class="btn" onclick="generateInputs()">Generar Entradas</button>
-    <div id="inputContainer">
-        <div id="xsInputs"></div>
-        <div id="yInputs"></div>
-    </div>
+    <button type="button" onclick="generateInputs()">Generar Matriz y Vector</button>
+    <div id="vectorInputs"></div>
     <button type="submit" class="btn">Calcular</button>
 </form>
 
+{% if funcion %}
+    <h2>Función Interpolante:</h2>
+    <p>{{ funcion }}</p>
+{% endif %}
+
 {% if expr %}
-    <h2>Resultado:</h2>
+    <h2>Expresión:</h2>
     <p>{{ expr }}</p>
 {% endif %}
 
 <script>
 function generateInputs() {
     const n = document.getElementById('id_n').value;
-    let xsInputs = '<h3>Valores de X</h3>';
-    let yInputs = '<h3>Valores de Y</h3>';
 
+    let vectorInputs = '<h3>Vector xs</h3>';
     for (let i = 0; i < n; i++) {
-        xsInputs += `<input type="text" name="xs_${i}" placeholder="X[${i}]" required><br>`;
-        yInputs += `<input type="text" name="y_${i}" placeholder="Y[${i}]" required><br>`;
+        vectorInputs += `<input type="text" name="xs_${i}" placeholder="xs[${i}]" required>`;
     }
 
-    document.getElementById('xsInputs').innerHTML = xsInputs;
-    document.getElementById('yInputs').innerHTML = yInputs;
+    vectorInputs += '<h3>Vector y</h3>';
+    for (let i = 0; i < n; i++) {
+        vectorInputs += `<input type="text" name="y_${i}" placeholder="y[${i}]" required>`;
+    }
+
+    document.getElementById('vectorInputs').innerHTML = vectorInputs;
 }
 </script>
-
-<style>
-#inputContainer {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 20px;
-}
-
-#xsInputs, #yInputs {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-input[type="text"] {
-    margin: 2px;
-    padding: 5px;
-}
-</style>
 {% endblock %}
