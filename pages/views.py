@@ -990,7 +990,8 @@ class LagrangePageView(TemplateView):
                             aux *= (x - xs[j]) / (xs[i] - xs[j])
                     expr += aux * y[i]
                 expr = sp.expand(expr)
-                return expr
+                funcion = f"F(x) = {expr}"
+                return funcion, expr
 
             expr = lagrange(xs, y, n)
             context['expr'] = expr
