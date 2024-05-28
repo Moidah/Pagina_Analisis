@@ -19,5 +19,12 @@
 <div class="buttons-container">
     <a class="btn" href="{% url 'gaussseidel' %}">Método de Gauss-Seidel</a>
     <a class="btn" href="{% url 'jacobi' %}">Método de Jacobi</a>
+    <a class="btn" href="{% url 'sor' %}">Método de SOR</a>
+    <a class="btn" href="{% url 'sor_matricial' %}">Método de SOR Matricial</a>
+</div>
+<h2> Metodos del capitulo 3 </h2>
+<p>Seleccione un método:</p>
+<div class="buttons-container">
+    <a class="btn" href="{% url 'gaussseidel' %}">Método de vandermonde</a>
 </div>
 {% endblock %}

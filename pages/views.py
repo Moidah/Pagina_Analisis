@@ -685,7 +685,6 @@ class JacobiPageView(TemplateView):
                 return render(request, self.template_name, context)
 
             def jacobi(A, b, x0, n, tol):
-                table = PrettyTable()
                 table.field_names = ["Iteraciones", "Vector", "Tolerancia"]
                 it = 0
                 t = tol + 1
@@ -722,3 +721,149 @@ class JacobiPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)  
+    
+#-------------SOR--------------------------------------------------------
+class SORForm(forms.Form):
+    n = forms.IntegerField(label="Dimensiones de la matriz (n)")
+    tol = forms.FloatField(label="Tolerancia")
+    niter = forms.IntegerField(label="Número máximo de iteraciones")
+    w = forms.FloatField(label="Parámetro de relajación (ω)")
+    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
+    
+
+class SORPageView(TemplateView):
+    template_name = 'sor.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = SORForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = SORForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            n = form.cleaned_data['n']
+            tol = form.cleaned_data['tol']
+            niter = form.cleaned_data['niter']
+            w = form.cleaned_data['w']
+            A = np.zeros((n, n))
+            b = np.zeros(n)
+            x0 = np.zeros(n)
+
+            for i in range(n):
+                for j in range(n):
+                    A[i][j] = float(request.POST.get(f'A_{i}_{j}'))
+                b[i] = float(request.POST.get(f'b_{i}'))
+                x0[i] = float(request.POST.get(f'x0_{i}'))
+
+            def sor(A, b, x0, n, tol, w):
+                table = []
+                it = 0
+                t = tol + 1
+                table.append([it, x0.copy(), t])
+                while t > tol:
+                    it += 1
+                    x_nuevo = np.zeros(n)
+                    for j in range(n):
+                        for k in range(n):
+                            if j == k:
+                                continue
+                            if j > k:
+                                x_nuevo[j] += A[j][k] * x_nuevo[k]
+                            else:
+                                x_nuevo[j] += A[j][k] * x0[k]
+                        x_nuevo[j] /= A[j][j]
+                        x_nuevo[j] *= -1 * w
+                        x_nuevo[j] += (1 - w) * x0[j] + (w * b[j]) / A[j][j]
+                    t = max(abs(x0 - x_nuevo))
+                    x0 = x_nuevo
+                    table.append([it, x0.copy(), t])
+                return table
+
+            iterations = sor(A, b, x0, n, tol, w)
+            result = iterations[-1][1] if iterations else []
+
+            if form.cleaned_data['export']:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_sor.txt"'
+                response.write("Iteración\tVector\tTolerancia\n")
+                for row in iterations:
+                    response.write(f"{row[0]}\t{row[1]}\t{row[2]}\n")
+                return response
+
+            context['result'] = result
+            context['iterations'] = iterations
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+
+#------------------SORMatricial-----------------------------------  
+class SORMForm(forms.Form):
+    n = forms.IntegerField(label="Dimensiones de la matriz (n)")
+    tol = forms.FloatField(label="Tolerancia")
+    niter = forms.IntegerField(label="Número máximo de iteraciones")
+    w = forms.FloatField(label="Parámetro de relajación (ω)")
+    export = forms.BooleanField(label="Exportar resultados a TXT", required=False) 
+    
+class SORMatricialPageView(TemplateView):
+    template_name = 'sor_matricial.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = SORMForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = SORMForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            n = form.cleaned_data['n']
+            tol = form.cleaned_data['tol']
+            niter = form.cleaned_data['niter']
+            w = form.cleaned_data['w']
+            A = np.zeros((n, n))
+            b = np.zeros(n)
+            x0 = np.zeros(n)
+
+            for i in range(n):
+                for j in range(n):
+                    A[i][j] = float(request.POST.get(f'A_{i}_{j}'))
+                b[i] = float(request.POST.get(f'b_{i}'))
+                x0[i] = float(request.POST.get(f'x0_{i}'))
+
+            def sor_matricial(A, b, x0, n, tol, w):
+                table.field_names = ["Iteraciones", "Vector", "Tolerancia"]
+                it = 0
+                t = tol + 1
+                table.add_row([it, x0.copy(), t])
+                D = np.diag(np.diag(A))
+                L = (-1) * np.tril(A - D)
+                U = (-1) * np.triu(A - D)
+                T = np.linalg.inv(D - w * L) @ ((1 - w) * D + w * U)
+                C = w * np.linalg.inv(D - w * L) @ np.transpose(b)
+                while t > tol and it < niter:
+                    it += 1
+                    x_nuevo = np.transpose(T @ np.transpose(x0) + C)
+                    t = max(abs(x0 - x_nuevo))
+                    x0 = x_nuevo
+                    table.add_row([it, x0.copy(), t])
+                return table, x0
+
+            table, result = sor_matricial(A, b, x0, n, tol, w)
+
+            if form.cleaned_data['export']:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_sor_matricial.txt"'
+                response.write(table.get_string())
+                return response
+
+            context['result'] = result
+            context['iterations'] = table
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)

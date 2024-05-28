@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Método SOR Matricial{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Método SOR Matricial</h1>
+    <form method="post" id="matrixForm">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="button" class="btn btn-primary" onclick="generateMatrix()">Generar Matriz y Vector</button>
+        <div id="matrixInputs" class="matrix-container mt-3"></div>
+        <div id="vectorInputs" class="vector-container mt-3"></div>
+        <button type="submit" class="btn btn-primary mt-3">Calcular</button>
+    </form>
+
+    {% if result %}
+        <h2>Resultado:</h2>
+        <p>Solución aproximada: {{ result }}</p>
+    {% endif %}
+
+    {% if iterations %}
+        <h2>Tabla de Resultados:</h2>
+        <pre>{{ iterations }}</pre>
+    {% endif %}
+</div>
+
+<script>
+function generateMatrix() {
+    const n = document.getElementById('id_n').value;
+    const matrixContainer = document.getElementById('matrixInputs');
+    const vectorContainer = document.getElementById('vectorInputs');
+
+    matrixContainer.innerHTML = '';
+    vectorContainer.innerHTML = '';
+
+    let matrixHTML = '<div class="row">';
+    for (let i = 0; i < n; i++) {
+        matrixHTML += '<div class="col-12 matrix-row">';
+        for (let j = 0; j < n; j++) {
+            matrixHTML += `
+                <div class="form-group matrix-item">
+                    <label for="id_A_${i}_${j}">A[${i}][${j}]</label>
+                    <input type="number" step="any" name="A_${i}_${j}" class="form-control" required>
+                </div>`;
+        }
+        matrixHTML += '</div>';
+    }
+    matrixHTML += '</div>';
+
+    let vectorBHTML = '<h5>Vector b</h5><div class="row">';
+    for (let i = 0; i < n; i++) {
+        vectorBHTML += `
+            <div class="col-12 vector-item">
+                <label for="id_b_${i}">b[${i}]</label>
+                <input type="number" step="any" name="b_${i}" class="form-control" required>
+            </div>`;
+    }
+    vectorBHTML += '</div>';
+
+    let vectorX0HTML = '<h5>Vector x0</h5><div class="row">';
+    for (let i = 0; i < n; i++) {
+        vectorX0HTML += `
+            <div class="col-12 vector-item">
+                <label for="id_x0_${i}">x0[${i}]</label>
+                <input type="number" step="any" name="x0_${i}" class="form-control" required>
+            </div>`;
+    }
+    vectorX0HTML += '</div>';
+
+    matrixContainer.innerHTML = matrixHTML;
+    vectorContainer.innerHTML = vectorBHTML + vectorX0HTML;
+}
+</script>
+{% endblock %}
