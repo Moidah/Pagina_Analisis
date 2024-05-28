@@ -1,3 +1,7 @@
+<<<<<<< HEAD:pages/static/pages/app.css
+=======
+/* static/pages/app.css */
+>>>>>>> 39c436c59b81449ab64e93a7dad8b3e107b12000:static/css/app.css
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -123,6 +127,7 @@ tbody tr:nth-of-type(even) {
     background-color: #f9f9f9;
 }
 
+<<<<<<< HEAD:pages/static/pages/app.css
 .matrix-container {
     display: flex;
     flex-wrap: wrap;
@@ -154,3 +159,23 @@ tbody tr:nth-of-type(even) {
 }
 
 
+=======
+.form-container {
+    background-color: rgba(255, 255, 255, 0.8); /* Blanco con transparencia */
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 500px; /* Ajusta esto según tus necesidades */
+    margin: 0 auto; /* Centra el div en la página */
+}
+
+.form-container form {
+    display: flex;
+    flex-direction: column; /* Alinea los inputs verticalmente */
+    align-items: center; /* Centra los inputs horizontalmente */
+}
+
+.form-container form input,
+.form-container form button {
+    margin-bottom: 10px; /* Espacio entre los inputs y el botón */
+}
+>>>>>>> 39c436c59b81449ab64e93a7dad8b3e107b12000:static/css/app.css
