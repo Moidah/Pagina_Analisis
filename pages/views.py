@@ -662,4 +662,83 @@ class GaussSeidelPageView(TemplateView):
 
         return render(request, self.template_name, context)
     
-    
+
+class JacobiForm(forms.Form):
+    n = forms.IntegerField(label='Dimensión de la matriz (n)', required=True)
+    tol = forms.FloatField(label='Tolerancia', required=True)
+    niter = forms.IntegerField(label='Número máximo de iteraciones', required=True)
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
+
+class JacobiPageView(TemplateView):
+    template_name = 'jacobi.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = JacobiForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = JacobiForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            try:
+                n = form.cleaned_data['n']
+                tol = form.cleaned_data['tol']
+                niter = form.cleaned_data['niter']
+                export = form.cleaned_data['export']
+
+                A = np.zeros((n, n))
+                b = np.zeros(n)
+                x0 = np.zeros(n)
+
+                for i in range(n):
+                    for j in range(n):
+                        A[i, j] = float(request.POST[f'A_{i}_{j}'])
+
+                for i in range(n):
+                    b[i] = float(request.POST[f'b_{i}'])
+                    x0[i] = float(request.POST[f'x0_{i}'])
+
+            except ValueError:
+                context['error'] = "Error al parsear las entradas. Asegúrate de que están en el formato correcto."
+                context['form'] = form
+                return render(request, self.template_name, context)
+
+            def jacobi(A, b, x0, n, tol):
+                table = PrettyTable()
+                table.field_names = ["Iteraciones", "Vector", "Tolerancia"]
+                it = 0
+                t = tol + 1
+                table.add_row([it, x0.tolist(), t])
+                iteraciones = [(it, x0.tolist(), t)]
+                while t > tol and it < niter:
+                    it += 1
+                    x_nuevo = np.zeros(n)
+                    for j in range(n):
+                        for k in range(n):
+                            if j == k:
+                                continue
+                            x_nuevo[j] += (-1) * A[j][k] * x0[k]
+                        x_nuevo[j] += b[j]
+                        x_nuevo[j] /= A[j][j]
+                    t = max(abs(x0 - x_nuevo))
+                    x0 = x_nuevo
+                    table.add_row([it, x0.tolist(), t])
+                    iteraciones.append((it, x0.tolist(), t))
+                return table, iteraciones
+
+            table, iteraciones = jacobi(A, b, x0, n, tol)
+
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_jacobi.txt"'
+                response.write(str(table))
+                return response
+
+            context['result'] = str(table)
+            context['iterations'] = iteraciones
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)  
