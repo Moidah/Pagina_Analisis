@@ -866,3 +866,143 @@ class SORMatricialPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+
+#-------------------Vandermonde----------------------------
+
+class VandermondeForm(forms.Form):
+    n = forms.IntegerField(label="Número de puntos")
+    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
+
+class VandermondePageView(TemplateView):
+    template_name = 'vandermonde.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = VandermondeForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = VandermondeForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            n = form.cleaned_data['n']
+            xs = [float(request.POST.get(f'xs_{i}')) for i in range(n)]
+            y = np.zeros(n)
+
+            for i in range(n):
+                y[i] = float(request.POST.get(f'y_{i}'))
+
+            def vandermonde(xs, y, n):
+                x = sp.symbols('x')
+                A = np.array([[i**j for j in range(n-1, -1, -1)] for i in xs])
+                C = np.linalg.solve(A, y)
+                C = C[::-1]
+                expr = sum(C[i] * x**i for i in range(n))
+                funcion = " + ".join([f"{C[i]}*x^{i}" for i in range(n)])
+                return funcion, expr
+
+            funcion, expr = vandermonde(xs, y, n)
+            context['funcion'] = funcion
+            context['expr'] = expr
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+    
+    
+#---------Newton_Interpolante--------------------------
+
+class NewtonInterpolanteForm(forms.Form):
+    n = forms.IntegerField(label="Número de puntos")
+    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
+
+class NewtonInterpolantePageView(TemplateView):
+    template_name = 'newton_interpolante.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = NewtonInterpolanteForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = NewtonInterpolanteForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            n = form.cleaned_data['n']
+            xs = [float(request.POST.get(f'xs_{i}')) for i in range(n)]
+            y = [float(request.POST.get(f'y_{i}')) for i in range(n)]
+
+            def newton_interpolante(xs, y, n):
+                x = sp.symbols('x')
+                dif_div = np.zeros((n, n+1))
+                dif_div[:, 0] = xs
+                dif_div[:, 1] = y
+                expr = 0
+                for i in range(n-1):
+                    for j in range(n-1):
+                        if i <= j:
+                            dif_div[j+1][i+2] = (dif_div[j+1][i+1] - dif_div[j][i+1]) / (dif_div[j+1][0] - dif_div[j+1-i-1][0])
+                for i in range(n):
+                    aux = dif_div[i][i+1]
+                    for j in range(i):
+                        aux *= (x - dif_div[j][0])
+                    expr += aux
+                expr = sp.expand(expr)
+                return expr
+
+            expr = newton_interpolante(xs, y, n)
+            context['expr'] = expr
+            context['form'] = form
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
+    
+#--------lagrange---------------------------------------------------
+
+class LagrangeForm(forms.Form):
+    n = forms.IntegerField(label="Número de puntos")
+    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
+    
+class LagrangePageView(TemplateView):
+    template_name = 'lagrange.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = LagrangeForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = LagrangeForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            n = form.cleaned_data['n']
+            xs = [float(request.POST.get(f'xs_{i}')) for i in range(n)]
+            y = [float(request.POST.get(f'y_{i}')) for i in range(n)]
+
+            def lagrange(xs, y, n):
+                x = sp.symbols('x')
+                expr = 0
+                for i in range(n):
+                    aux = 1
+                    for j in range(n):
+                        if i != j:
+                            aux *= (x - xs[j]) / (xs[i] - xs[j])
+                    expr += aux * y[i]
+                expr = sp.expand(expr)
+                return expr
+
+            expr = lagrange(xs, y, n)
+            context['expr'] = expr
+            context['form'] = form
+
+            if form.cleaned_data['export']:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_lagrange.txt"'
+                response.write(f"Polinomio Interpolante:\n{expr}\n")
+                return response
+        else:
+            context['form'] = form
+
+        return render(request, self.template_name, context)
