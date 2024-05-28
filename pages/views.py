@@ -577,13 +577,10 @@ class RaicesMultiplesPageView(TemplateView):
     
 #------------------GaussSeidel----------------------------- 
 class GaussSeidelForm(forms.Form):
-    rows = forms.IntegerField(label='Número de filas (n)', min_value=1, required=True)
-    cols = forms.IntegerField(label='Número de columnas (n)', min_value=1, required=True)
-    tol = forms.FloatField(label='Tolerancia', required=True)
-    numIter = forms.IntegerField(label='Número máximo de iteraciones', required=True)
-    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
-    A = forms.CharField(widget=forms.HiddenInput(), required=False)
-    b = forms.CharField(widget=forms.HiddenInput(), required=False)
+    n = forms.IntegerField(label="Dimensiones de la matriz (n)")
+    tol = forms.FloatField(label="Tolerancia")
+    niter = forms.IntegerField(label="Número máximo de iteraciones")
+    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
     
 class GaussSeidelPageView(TemplateView):
     template_name = 'gaussseidel.html'
@@ -597,72 +594,55 @@ class GaussSeidelPageView(TemplateView):
         form = GaussSeidelForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            rows = form.cleaned_data['rows']
-            cols = form.cleaned_data['cols']
+            n = form.cleaned_data['n']
             tol = form.cleaned_data['tol']
-            numIter = form.cleaned_data['numIter']
-            export = form.cleaned_data['export']
+            niter = form.cleaned_data['niter']
+            A = np.zeros((n, n))
+            b = np.zeros(n)
+            x0 = np.zeros(n)
 
-            
-            A = [[float(request.POST[f'A_{i}_{j}']) for j in range(cols)] for i in range(rows)]
-            b = [float(request.POST[f'b_{i}']) for i in range(rows)]
+            for i in range(n):
+                for j in range(n):
+                    A[i][j] = float(request.POST.get(f'A_{i}_{j}'))
+                b[i] = float(request.POST.get(f'b_{i}'))
+                x0[i] = float(request.POST.get(f'x0_{i}'))
 
-            A = np.array(A)
-            b = np.array(b).reshape(-1, 1)
+            def gauss_seidel(A, b, x0, n, tol):
+                table = []
+                it = 0
+                t = tol + 1
+                table.append([it, x0.copy(), t])
+                while t > tol:
+                    it += 1
+                    x_nuevo = np.zeros(n)
+                    for j in range(n):
+                        sum_ax = sum(A[j][k] * x_nuevo[k] if k < j else A[j][k] * x0[k] for k in range(n) if k != j)
+                        x_nuevo[j] = (b[j] - sum_ax) / A[j][j]
+                    t = max(abs(x0 - x_nuevo))
+                    x0 = x_nuevo
+                    table.append([it, x0.copy(), t])
+                return table
 
-            def GaussSeidel(A, b, tol, numIter):
-                n = np.size(A, 0)
-                L = -np.tril(A, -1)
-                U = -np.triu(A, 1)
-                D = A + L + U
-                x0 = np.zeros([n, 1])
-                Tg = np.matmul(inv(D - L), U)
-                autoval, autovec = np.linalg.eig(Tg)
-                autoval = abs(autoval)
+            iterations = gauss_seidel(A, b, x0, n, tol)
+            result = iterations[-1][1] if iterations else []
 
-                for lam in autoval:
-                    if lam >= 1:
-                        return ["El método no pudo converger de acuerdo a los parámetros ingresados"], []
-
-                C = np.matmul(inv(D - L), b)
-                xn = np.matmul(Tg, x0) + C
-                error = np.amax(abs(xn - (np.dot(Tg, xn) + C)))
-                error = np.amax(error)
-                iter = 0
-                iteraciones = []
-
-                while ((error > tol) and (iter < numIter)):
-                    nuevo = np.matmul(Tg, xn) + C
-                    error = np.amax(abs(nuevo - xn))
-                    error = np.amax(error)
-                    iteraciones.append((iter, xn.flatten().tolist(), nuevo.flatten().tolist(), error))
-                    xn = nuevo
-                    iter = iter + 1
-
-                iteraciones.append((iter, xn.flatten().tolist(), nuevo.flatten().tolist(), error))
-                return xn.flatten().tolist(), iteraciones
-
-            result, iteraciones = GaussSeidel(A, b, tol, numIter)
-
-            if export:
+            if form.cleaned_data['export']:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_gaussseidel.txt"'
-                response.write(f"Solución aproximada: {result}\n")
-                response.write("Iteración\tXanterior\tXnuevo\tError\n")
-                for row in iteraciones:
-                    iter_num, xant, xnuevo, err = row
-                    response.write(f"{iter_num}\t{xant}\t{xnuevo}\t{err}\n")
+                response.write("Iteración\tVector\tTolerancia\n")
+                for row in iterations:
+                    response.write(f"{row[0]}\t{row[1]}\t{row[2]}\n")
                 return response
 
             context['result'] = result
-            context['iterations'] = iteraciones
+            context['iterations'] = iterations
             context['form'] = form
         else:
             context['form'] = form
 
         return render(request, self.template_name, context)
     
-
+#---------------------Jacobi------------------------------------------------
 class JacobiForm(forms.Form):
     n = forms.IntegerField(label='Dimensión de la matriz (n)', required=True)
     tol = forms.FloatField(label='Tolerancia', required=True)
