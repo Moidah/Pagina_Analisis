@@ -3,90 +3,72 @@
 {% block title %}Método SOR{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="mb-4">Método SOR</h1>
-    <form method="post" id="matrixForm">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="button" class="btn btn-primary" onclick="generateMatrix()">Generar Matriz y Vector</button>
-        <div id="matrixInputs" class="matrix-container mt-3"></div>
-        <div id="vectorInputs" class="vector-container mt-3"></div>
-        <button type="submit" class="btn btn-primary mt-3">Calcular</button>
-    </form>
+<h1>Método SOR</h1>
+<form method="post" id="matrixForm">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="button" class="btn" onclick="generateMatrix()">Generar Matriz y Vector</button>
+    <div id="matrixContainer">
+        <div id="matrixInputs"></div>
+        <div id="vectorInputs"></div>
+        <div id="x0Inputs"></div>
+    </div>
+    <button type="submit" class="btn">Calcular</button>
+</form>
 
-    {% if result %}
-        <h2>Resultado:</h2>
-        <p>Solución aproximada: {{ result }}</p>
-    {% endif %}
+{% if result %}
+    <h2>Resultado:</h2>
+    <p>Solución aproximada: {{ result }}</p>
+{% endif %}
 
-    {% if iterations %}
-        <h2>Tabla de Resultados:</h2>
-        <table class="table table-striped">
-            <thead>
+{% if iterations %}
+    <h2>Tabla de Resultados:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Iteración</th>
+                <th>Vector</th>
+                <th>Tolerancia</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in iterations %}
                 <tr>
-                    <th>Iteración</th>
-                    <th>Vector</th>
-                    <th>Tolerancia</th>
+                    <td>{{ row.0 }}</td>
+                    <td>{{ row.1 }}</td>
+                    <td>{{ row.2 }}</td>
                 </tr>
-            </thead>
-            <tbody>
-                {% for row in iterations %}
-                    <tr>
-                        <td>{{ row.0 }}</td>
-                        <td>{{ row.1 }}</td>
-                        <td>{{ row.2 }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endif %}
-</div>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
 
 <script>
 function generateMatrix() {
-    const n = document.getElementById('id_n').value;
-    const matrixContainer = document.getElementById('matrixInputs');
-    const vectorContainer = document.getElementById('vectorInputs');
+    const rows = document.getElementById('id_n').value;
+    let matrixInputs = '<h3>Matriz A</h3>';
+    let vectorInputs = '<h3>Vector b</h3>';
+    let x0Inputs = '<h3>Vector x0</h3>';
 
-    matrixContainer.innerHTML = '';
-    vectorContainer.innerHTML = '';
-
-    let matrixHTML = '<div class="row">';
-    for (let i = 0; i < n; i++) {
-        matrixHTML += '<div class="col-12 matrix-row">';
-        for (let j = 0; j < n; j++) {
-            matrixHTML += `
-                <div class="form-group matrix-item">
-                    <label for="id_A_${i}_${j}">A[${i}][${j}]</label>
-                    <input type="number" step="any" name="A_${i}_${j}" class="form-control" required>
-                </div>`;
+    for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < rows; j++) {
+            matrixInputs += `<input type="text" name="A_${i}_${j}" placeholder="A[${i}][${j}]" required>`;
         }
-        matrixHTML += '</div>';
+        matrixInputs += '<br>';
     }
-    matrixHTML += '</div>';
 
-    let vectorBHTML = '<h5>Vector b</h5><div class="row">';
-    for (let i = 0; i < n; i++) {
-        vectorBHTML += `
-            <div class="col-12 vector-item">
-                <label for="id_b_${i}">b[${i}]</label>
-                <input type="number" step="any" name="b_${i}" class="form-control" required>
-            </div>`;
+    for (let i = 0; i < rows; i++) {
+        vectorInputs += `<input type="text" name="b_${i}" placeholder="b[${i}]" required><br>`;
     }
-    vectorBHTML += '</div>';
 
-    let vectorX0HTML = '<h5>Vector x0</h5><div class="row">';
-    for (let i = 0; i < n; i++) {
-        vectorX0HTML += `
-            <div class="col-12 vector-item">
-                <label for="id_x0_${i}">x0[${i}]</label>
-                <input type="number" step="any" name="x0_${i}" class="form-control" required>
-            </div>`;
+    for (let i = 0; i < rows; i++) {
+        x0Inputs += `<input type="text" name="x0_${i}" placeholder="x0[${i}]" required><br>`;
     }
-    vectorX0HTML += '</div>';
 
-    matrixContainer.innerHTML = matrixHTML;
-    vectorContainer.innerHTML = vectorBHTML + vectorX0HTML;
+    document.getElementById('matrixInputs').innerHTML = matrixInputs;
+    document.getElementById('vectorInputs').innerHTML = vectorInputs;
+    document.getElementById('x0Inputs').innerHTML = x0Inputs;
 }
 </script>
+
 {% endblock %}

@@ -6,6 +6,7 @@ from plotly.offline import plot
 import numpy as np
 from numpy.linalg import inv
 import sympy as sp
+from prettytable import PrettyTable
 
 #-------------Para ingresar todos los parametros de los metodos--------------------------
 class FunctionForm(forms.Form):
@@ -607,24 +608,23 @@ class GaussSeidelPageView(TemplateView):
                 b[i] = float(request.POST.get(f'b_{i}'))
                 x0[i] = float(request.POST.get(f'x0_{i}'))
 
-            def gauss_seidel(A, b, x0, n, tol):
-                table = []
+            def gauss_seidel(A, b, x0, n, tol, niter):
+                iteraciones = []
                 it = 0
                 t = tol + 1
-                table.append([it, x0.copy(), t])
-                while t > tol:
+                iteraciones.append([it, x0.copy().tolist(), t])
+                while t > tol and it < niter:
                     it += 1
                     x_nuevo = np.zeros(n)
                     for j in range(n):
                         sum_ax = sum(A[j][k] * x_nuevo[k] if k < j else A[j][k] * x0[k] for k in range(n) if k != j)
                         x_nuevo[j] = (b[j] - sum_ax) / A[j][j]
-                    t = max(abs(x0 - x_nuevo))
+                    t = np.max(np.abs(x0 - x_nuevo))
                     x0 = x_nuevo
-                    table.append([it, x0.copy(), t])
-                return table
+                    iteraciones.append([it, x0.copy().tolist(), t])
+                return iteraciones, x0.tolist()
 
-            iterations = gauss_seidel(A, b, x0, n, tol)
-            result = iterations[-1][1] if iterations else []
+            iterations, result = gauss_seidel(A, b, x0, n, tol, niter)
 
             if form.cleaned_data['export']:
                 response = HttpResponse(content_type='text/plain')
@@ -661,66 +661,69 @@ class JacobiPageView(TemplateView):
         form = JacobiForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            try:
-                n = form.cleaned_data['n']
-                tol = form.cleaned_data['tol']
-                niter = form.cleaned_data['niter']
-                export = form.cleaned_data['export']
+            n = form.cleaned_data['n']
+            tol = form.cleaned_data['tol']
+            niter = form.cleaned_data['niter']
+            A = np.zeros((n, n))
+            b = np.zeros(n)
+            x0 = np.zeros(n)
 
-                A = np.zeros((n, n))
-                b = np.zeros(n)
-                x0 = np.zeros(n)
+            for i in range(n):
+                for j in range(n):
+                    value = request.POST.get(f'A_{i}_{j}')
+                    if value is not None and value != '':
+                        A[i][j] = float(value)
+                    else:
+                        context['error'] = "Todos los valores de la matriz A deben ser proporcionados."
+                        return render(request, self.template_name, context)
 
-                for i in range(n):
-                    for j in range(n):
-                        A[i, j] = float(request.POST[f'A_{i}_{j}'])
+                value = request.POST.get(f'b_{i}')
+                if value is not None and value != '':
+                    b[i] = float(value)
+                else:
+                    context['error'] = "Todos los valores del vector b deben ser proporcionados."
+                    return render(request, self.template_name, context)
 
-                for i in range(n):
-                    b[i] = float(request.POST[f'b_{i}'])
-                    x0[i] = float(request.POST[f'x0_{i}'])
+                value = request.POST.get(f'x0_{i}')
+                if value is not None and value != '':
+                    x0[i] = float(value)
+                else:
+                    context['error'] = "Todos los valores del vector x0 deben ser proporcionados."
+                    return render(request, self.template_name, context)
 
-            except ValueError:
-                context['error'] = "Error al parsear las entradas. Asegúrate de que están en el formato correcto."
-                context['form'] = form
-                return render(request, self.template_name, context)
-
-            def jacobi(A, b, x0, n, tol):
-                table.field_names = ["Iteraciones", "Vector", "Tolerancia"]
+            def jacobi(A, b, x0, n, tol, niter):
+                iteraciones = []
                 it = 0
                 t = tol + 1
-                table.add_row([it, x0.tolist(), t])
-                iteraciones = [(it, x0.tolist(), t)]
+                iteraciones.append([it, x0.copy().tolist(), t])
                 while t > tol and it < niter:
                     it += 1
                     x_nuevo = np.zeros(n)
                     for j in range(n):
-                        for k in range(n):
-                            if j == k:
-                                continue
-                            x_nuevo[j] += (-1) * A[j][k] * x0[k]
-                        x_nuevo[j] += b[j]
-                        x_nuevo[j] /= A[j][j]
-                    t = max(abs(x0 - x_nuevo))
+                        suma = sum(-A[j][k] * x0[k] if j != k else 0 for k in range(n))
+                        x_nuevo[j] = (b[j] + suma) / A[j][j]
+                    t = np.max(np.abs(x0 - x_nuevo))
                     x0 = x_nuevo
-                    table.add_row([it, x0.tolist(), t])
-                    iteraciones.append((it, x0.tolist(), t))
-                return table, iteraciones
+                    iteraciones.append([it, x0.copy().tolist(), t])
+                return iteraciones, x0.tolist()
 
-            table, iteraciones = jacobi(A, b, x0, n, tol)
+            iteraciones, result = jacobi(A, b, x0, n, tol, niter)
 
-            if export:
+            if form.cleaned_data['export']:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_jacobi.txt"'
-                response.write(str(table))
+                response.write("Iteración\tVector\tTolerancia\n")
+                for row in iteraciones:
+                    response.write(f"{row[0]}\t{row[1]}\t{row[2]}\n")
                 return response
 
-            context['result'] = str(table)
+            context['result'] = result
             context['iterations'] = iteraciones
             context['form'] = form
         else:
             context['form'] = form
 
-        return render(request, self.template_name, context)  
+        return render(request, self.template_name, context)
     
 #-------------SOR--------------------------------------------------------
 class SORForm(forms.Form):
@@ -762,20 +765,13 @@ class SORPageView(TemplateView):
                 it = 0
                 t = tol + 1
                 table.append([it, x0.copy(), t])
-                while t > tol:
+                while t > tol and it < niter:
                     it += 1
                     x_nuevo = np.zeros(n)
                     for j in range(n):
-                        for k in range(n):
-                            if j == k:
-                                continue
-                            if j > k:
-                                x_nuevo[j] += A[j][k] * x_nuevo[k]
-                            else:
-                                x_nuevo[j] += A[j][k] * x0[k]
-                        x_nuevo[j] /= A[j][j]
-                        x_nuevo[j] *= -1 * w
-                        x_nuevo[j] += (1 - w) * x0[j] + (w * b[j]) / A[j][j]
+                        sum_ax = sum(A[j][k] * x_nuevo[k] if k < j else A[j][k] * x0[k] for k in range(n) if k != j)
+                        x_nuevo[j] = (b[j] - sum_ax) / A[j][j]
+                        x_nuevo[j] = (1 - w) * x0[j] + w * x_nuevo[j]
                     t = max(abs(x0 - x_nuevo))
                     x0 = x_nuevo
                     table.append([it, x0.copy(), t])
@@ -799,6 +795,7 @@ class SORPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+
 
 #------------------SORMatricial-----------------------------------  
 class SORMForm(forms.Form):

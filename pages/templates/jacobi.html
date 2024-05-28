@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}Método de Jacobi{% endblock %}
+{% block title %}Método Jacobi{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
-    <h1 class="mb-4">Método de Jacobi</h1>
+    <h1 class="mb-4">Método Jacobi</h1>
     <form method="post" id="matrixForm">
         {% csrf_token %}
         {{ form.as_p }}
@@ -14,6 +14,12 @@
         <button type="submit" class="btn">Calcular</button>
     </form>
 
+    {% if error %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+    {% endif %}
+
     {% if result %}
         <h2>Resultado:</h2>
         <p>Solución aproximada: {{ result }}</p>
@@ -21,7 +27,7 @@
 
     {% if iterations %}
         <h2>Tabla de Resultados:</h2>
-        <table class="table table-striped">
+        <table class="table table-bordered">
             <thead>
                 <tr>
                     <th>Iteración</th>
