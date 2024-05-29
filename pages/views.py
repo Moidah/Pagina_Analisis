@@ -1057,3 +1057,44 @@ class LagrangePageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+    
+#----------------------spline-----------------------------------
+
+class SplineForm(forms.Form):
+    n = forms.IntegerField(label='Número de puntos', min_value=2, required=True)
+    xs = forms.CharField(label='Valores de X (separados por comas)', required=True)
+    y = forms.CharField(label='Valores de Y (separados por comas)', required=True)
+    
+
+class SplineLinealPageView(TemplateView):
+    template_name = 'spline.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = SplineForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = SplineForm(request.POST)
+        context = self.get_context_data()
+        if form.is_valid():
+            n = form.cleaned_data['n']
+            xs = np.array([float(x.strip()) for x in form.cleaned_data['xs'].split(',')])
+            y = np.array([float(y.strip()) for y in form.cleaned_data['y'].split(',')])
+
+            coef, polinomios = self.spline_lineal(xs, y, n)
+
+            context['coeficientes'] = coef.tolist()
+            context['polinomios'] = polinomios
+        context['form'] = form
+        return render(request, self.template_name, context)
+
+    def spline_lineal(self, xs, y, n):
+        coef = np.zeros((n-1, 2))
+        polinomios = []
+        for i in range(n-1):
+            A = np.array([[xs[i], 1], [xs[i+1], 1]])
+            B = np.array([[y[i]], [y[i+1]]])
+            coef[i, :] = np.transpose(np.linalg.inv(A) @ B)
+            polinomios.append(f"P{i+1}(x) = {round(coef[i][0], 4)}x + {round(coef[i][1], 4)}")
+        return coef, polinomios

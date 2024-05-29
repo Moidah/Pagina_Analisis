@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import HomePageView, MetodosPageView, NosotrosPageView, BiseccionPageView, PuntoFijoPageView, ReglaFalsaPageView, NewtonPageView, SecantePageView, RaicesMultiplesPageView, GaussSeidelPageView, JacobiPageView, SORPageView, SORMatricialPageView, VandermondePageView, NewtonInterpolantePageView, LagrangePageView
+from .views import HomePageView, MetodosPageView, NosotrosPageView, BiseccionPageView, PuntoFijoPageView, ReglaFalsaPageView, NewtonPageView, SecantePageView, RaicesMultiplesPageView, GaussSeidelPageView, JacobiPageView, SORPageView, SORMatricialPageView, VandermondePageView, NewtonInterpolantePageView, LagrangePageView, SplineLinealPageView
 
 
 urlpatterns = [
@@ -20,5 +20,6 @@ urlpatterns = [
     path('vandermonde/', VandermondePageView.as_view(), name='vandermonde'),
     path('newton_interpolante/', NewtonInterpolantePageView.as_view(), name='newton_interpolante'),
     path('lagrange/', LagrangePageView.as_view(), name='lagrange'),
+    path('spline/', SplineLinealPageView.as_view(), name='spline'),
 
 ]

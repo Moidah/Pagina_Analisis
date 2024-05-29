@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Spline Lineal{% endblock %}
+
+{% block content %}
+<h1>Spline Lineal</h1>
+<img src="{% static 'images/spline1.png' %}" alt="spline1">
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn">Calcular</button>
+</form>
+
+{% if coeficientes %}
+    <h2>Coeficientes:</h2>
+    <pre>{{ coeficientes }}</pre>
+{% endif %}
+
+{% if polinomios %}
+    <h2>Polinomios de Spline:</h2>
+    <ul>
+        {% for poly in polinomios %}
+            <li>{{ poly }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+{% endblock %}
