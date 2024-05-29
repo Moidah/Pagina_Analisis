@@ -4,9 +4,10 @@ from django.views.generic import TemplateView
 import plotly.graph_objs as go
 from plotly.offline import plot
 import numpy as np
-from numpy.linalg import inv
 import sympy as sp
-from prettytable import PrettyTable
+import matplotlib.pyplot as plt
+import io
+import urllib, base64
 
 #-------------Para ingresar todos los parametros de los metodos--------------------------
 class FunctionForm(forms.Form):
@@ -92,6 +93,20 @@ class BiseccionPageView(TemplateView):
             fi = sp.sympify(fun).subs(x, xi)
             fs = sp.sympify(fun).subs(x, xs)
             iterations = []
+            
+            function_expr = sp.sympify(fun)
+            x_values = np.linspace(xi, xs, 400)
+            y_values = [function_expr.subs(x, val) for val in x_values]
+
+            fig, ax = plt.subplots(figsize=(10, 6))  # Aumenta el tamaño de la figura
+            ax.plot(x_values, y_values, label=f'f(x) = {fun}', color='blue')
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')  # Etiqueta del eje x
+            ax.set_ylabel('f(x)')  # Etiqueta del eje y
+            ax.set_title('Gráfica de la función')  # Título de la gráfica
+            plt.legend()
 
             if fi == 0:
                 s = xi
@@ -150,9 +165,18 @@ class BiseccionPageView(TemplateView):
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
             context['result'] = result
             context['iterations'] = iterations
             context['form'] = form
+            context['image'] = uri
+
         else:
             context['form'] = form
 
