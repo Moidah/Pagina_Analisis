@@ -577,10 +577,11 @@ class RaicesMultiplesPageView(TemplateView):
     
 #------------------GaussSeidel----------------------------- 
 class GaussSeidelForm(forms.Form):
-    n = forms.IntegerField(label="Dimensiones de la matriz (n)")
+    rows = forms.IntegerField(label="Número de filas")
+    cols = forms.IntegerField(label="Número de columnas")
     tol = forms.FloatField(label="Tolerancia")
     niter = forms.IntegerField(label="Número máximo de iteraciones")
-    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
+    export = forms.BooleanField(required=False, label="Exportar resultados a TXT")
     
 class GaussSeidelPageView(TemplateView):
     template_name = 'gaussseidel.html'
@@ -594,20 +595,29 @@ class GaussSeidelPageView(TemplateView):
         form = GaussSeidelForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            n = form.cleaned_data['n']
+            n = form.cleaned_data['rows']
             tol = form.cleaned_data['tol']
             niter = form.cleaned_data['niter']
             A = np.zeros((n, n))
             b = np.zeros(n)
             x0 = np.zeros(n)
 
-            for i in range(n):
-                for j in range(n):
-                    A[i][j] = float(request.POST.get(f'A_{i}_{j}'))
-                b[i] = float(request.POST.get(f'b_{i}'))
-                x0[i] = float(request.POST.get(f'x0_{i}'))
+            try:
+                for i in range(n):
+                    for j in range(n):
+                        A[i][j] = float(request.POST.get(f'A_{i}_{j}', 0))
+                    b[i] = float(request.POST.get(f'b_{i}', 0))
+                    x0[i] = float(request.POST.get(f'x0_{i}', 0))
+            except ValueError as e:
+                context['error'] = "Asegúrate de ingresar todos los valores de la matriz y el vector correctamente."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
             def gauss_seidel(A, b, x0, n, tol, niter):
+                # Check for zero in the diagonal
+                if any(A[i][i] == 0 for i in range(n)):
+                    return None, "El método no puede converger debido a un 0 en la diagonal de la matriz A."
+
                 iteraciones = []
                 it = 0
                 t = tol + 1
@@ -625,6 +635,11 @@ class GaussSeidelPageView(TemplateView):
 
             iterations, result = gauss_seidel(A, b, x0, n, tol, niter)
 
+            if iterations is None:
+                context['error'] = result
+                context['form'] = form
+                return render(request, self.template_name, context)
+
             if form.cleaned_data['export']:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_gaussseidel.txt"'
@@ -640,6 +655,7 @@ class GaussSeidelPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+
     
 #---------------------Jacobi------------------------------------------------
 class JacobiForm(forms.Form):
@@ -690,6 +706,11 @@ class JacobiPageView(TemplateView):
                     context['error'] = "Todos los valores del vector x0 deben ser proporcionados."
                     return render(request, self.template_name, context)
 
+            # Verificar ceros en la diagonal de la matriz
+            if any(A[i][i] == 0 for i in range(n)):
+                context['error'] = "El método no puede converger debido a un 0 en la diagonal de la matriz A."
+                return render(request, self.template_name, context)
+
             def jacobi(A, b, x0, n, tol, niter):
                 iteraciones = []
                 it = 0
@@ -723,6 +744,8 @@ class JacobiPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+
+
     
 #-------------SOR--------------------------------------------------------
 class SORForm(forms.Form):
@@ -755,15 +778,37 @@ class SORPageView(TemplateView):
 
             for i in range(n):
                 for j in range(n):
-                    A[i][j] = float(request.POST.get(f'A_{i}_{j}'))
-                b[i] = float(request.POST.get(f'b_{i}'))
-                x0[i] = float(request.POST.get(f'x0_{i}'))
+                    value = request.POST.get(f'A_{i}_{j}')
+                    if value is not None and value != '':
+                        A[i][j] = float(value)
+                    else:
+                        context['error'] = "Todos los valores de la matriz A deben ser proporcionados."
+                        return render(request, self.template_name, context)
+
+                value = request.POST.get(f'b_{i}')
+                if value is not None and value != '':
+                    b[i] = float(value)
+                else:
+                    context['error'] = "Todos los valores del vector b deben ser proporcionados."
+                    return render(request, self.template_name, context)
+
+                value = request.POST.get(f'x0_{i}')
+                if value is not None and value != '':
+                    x0[i] = float(value)
+                else:
+                    context['error'] = "Todos los valores del vector x0 deben ser proporcionados."
+                    return render(request, self.template_name, context)
+
+            # Verificar ceros en la diagonal de la matriz
+            if any(A[i][i] == 0 for i in range(n)):
+                context['error'] = "El método no puede converger debido a un 0 en la diagonal de la matriz A."
+                return render(request, self.template_name, context)
 
             def sor(A, b, x0, n, tol, w):
-                table = []
+                iteraciones = []
                 it = 0
                 t = tol + 1
-                table.append([it, x0.copy().tolist(), t])
+                iteraciones.append([it, x0.copy().tolist(), t])
                 while t > tol and it < niter:
                     it += 1
                     x_nuevo = np.zeros(n)
@@ -771,13 +816,12 @@ class SORPageView(TemplateView):
                         sum_ax = sum(A[j][k] * x_nuevo[k] if k < j else A[j][k] * x0[k] for k in range(n) if k != j)
                         x_nuevo[j] = (b[j] - sum_ax) / A[j][j]
                         x_nuevo[j] = (1 - w) * x0[j] + w * x_nuevo[j]
-                    t = max(abs(x0 - x_nuevo))
+                    t = np.max(np.abs(x0 - x_nuevo))
                     x0 = x_nuevo
-                    table.append([it, x0.copy().tolist(), t])
-                return table
+                    iteraciones.append([it, x0.copy().tolist(), t])
+                return iteraciones, x0.tolist()
 
-            iterations = sor(A, b, x0, n, tol, w)
-            result = iterations[-1][1] if iterations else []
+            iterations, result = sor(A, b, x0, n, tol, w)
 
             if form.cleaned_data['export']:
                 response = HttpResponse(content_type='text/plain')
@@ -794,6 +838,7 @@ class SORPageView(TemplateView):
             context['form'] = form
 
         return render(request, self.template_name, context)
+
 
 
 #------------------SORMatricial-----------------------------------  

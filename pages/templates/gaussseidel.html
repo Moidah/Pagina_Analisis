@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Método de Gauss-Seidel{% endblock %}
 
@@ -9,14 +10,15 @@
 <form method="post" id="matrixForm">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="button" class="btn" onclick="generateMatrix()">Generar Matriz y Vector</button>
-    <div id="matrixContainer">
-        <div id="matrixInputs"></div>
-        <div id="vectorInputs"></div>
-        <div id="x0Inputs"></div>
-    </div>
+    <button type="button" onclick="generateMatrix()">Generar Matriz y Vector</button>
+    <div id="matrixInputs"></div>
+    <div id="vectorInputs"></div>
     <button type="submit" class="btn">Calcular</button>
 </form>
+
+{% if error %}
+    <div class="error">{{ error }}</div>
+{% endif %}
 
 {% if result %}
     <h2>Resultado:</h2>
@@ -47,30 +49,22 @@
 
 <script>
 function generateMatrix() {
-    const rows = document.getElementById('id_n').value;
-    let matrixInputs = '<h3>Matriz A</h3>';
-    let vectorInputs = '<h3>Vector b</h3>';
-    let x0Inputs = '<h3>Vector x0</h3>';
+    const rows = document.getElementById('id_rows').value;
+    const cols = document.getElementById('id_cols').value;
+
+    let matrixInputs = '';
+    let vectorInputs = '';
 
     for (let i = 0; i < rows; i++) {
-        for (let j = 0; j < rows; j++) {
+        for (let j = 0; j < cols; j++) {
             matrixInputs += `<input type="text" name="A_${i}_${j}" placeholder="A[${i}][${j}]" required>`;
         }
         matrixInputs += '<br>';
-    }
-
-    for (let i = 0; i < rows; i++) {
         vectorInputs += `<input type="text" name="b_${i}" placeholder="b[${i}]" required><br>`;
-    }
-
-    for (let i = 0; i < rows; i++) {
-        x0Inputs += `<input type="text" name="x0_${i}" placeholder="x0[${i}]" required><br>`;
     }
 
     document.getElementById('matrixInputs').innerHTML = matrixInputs;
     document.getElementById('vectorInputs').innerHTML = vectorInputs;
-    document.getElementById('x0Inputs').innerHTML = x0Inputs;
 }
 </script>
-
 {% endblock %}
