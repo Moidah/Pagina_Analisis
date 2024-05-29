@@ -185,12 +185,22 @@ class BiseccionPageView(TemplateView):
 #---------PUNTO_FIJO--------------------
 # Formulario para el método de punto fijo
 class PuntoFijoForm(forms.Form):
-    x0 = forms.FloatField(label='X0', required=True)
+    xi = forms.FloatField(label='Xi', required=True)
     tol = forms.FloatField(label='Tol', required=True)
-    Nmax = forms.IntegerField(label='Nmax', required=True)
-    g = forms.CharField(label='Function g(x)', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función g(x)'}))
+    niter = forms.IntegerField(label='Niter', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
 
+# Formulario para el método de la Regla Falsa
+class ReglaFalsaForm(forms.Form):
+    xi = forms.FloatField(label='Xi', required=True)
+    xs = forms.FloatField(label='Xs', required=True)
+    tol = forms.FloatField(label='Tol', required=True)
+    niter = forms.IntegerField(label='Niter', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
+
+# Vista para el método de punto fijo
 class PuntoFijoPageView(TemplateView):
     template_name = 'puntofijo.html'
 
@@ -205,52 +215,57 @@ class PuntoFijoPageView(TemplateView):
         if form.is_valid():
             xi = form.cleaned_data['xi']
             tol = form.cleaned_data['tol']
-            Nmax = form.cleaned_data['Nmax']
-            g_str = form.cleaned_data['g']
+            niter = form.cleaned_data['niter']
+            fun = form.cleaned_data['fun']
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            g = sp.sympify(g_str)
-            f = (x)**2 - 100
+            g = sp.sympify(fun)
+            fi = g.subs(x, xi)
+            iterations = []
+            iter_nums = []
+            x_ants = []
+            
+            c = 0
+            error = tol + 1
+            while error > tol and c < niter:
+                xn = g.subs(x, xi)
+                error = abs(xn - xi)
+                iterations.append([c, float(xi), float(xn), float(error)])
+                iter_nums.append(c)
+                x_ants.append(float(xi))
+                xi = xn
+                c += 1
 
-            def Cre_o_Decre(f, x0):
-                return sp.diff(f, x).subs(x, x0) > 0
-
-            def PuntoFijo(g, x0, tol, Nmax):
-                # Inicialización
-                xant = x0
-                E = 1000
-                cont = 0
-                iteraciones = []
-                
-                # Ciclo
-                while E > tol and cont < Nmax:
-                    xact = g.subs(x, xant)
-                    E = abs(xact - xant)
-                    cont += 1
-                    iteraciones.append((cont, xant, xact, E))
-                    xant = xact
-
-                return [xact, cont, E], iteraciones
-
-            creciente = Cre_o_Decre(f, x0)
-            (xact, cont, E), iteraciones = PuntoFijo(g, x0, tol, Nmax)
-            result = f"Convergió a {xact} con una tolerancia de {tol}" if E < tol else f"No convergió después de {Nmax} iteraciones"
-
-            context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
-            context['result'] = result
-            context['iterations'] = iteraciones
+            result = f"El método convergió a {float(xi)} en {c} iteraciones con un error de {float(error)}."
 
             if export:
                 response = HttpResponse(content_type='text/plain')
-                response['Content-Disposition'] = 'attachment; filename="resultados_puntofijo.txt"'
-                response.write(f"{context['creciente']}\n")
+                response['Content-Disposition'] = 'attachment; filename="resultados_punto_fijo.txt"'
                 response.write(f"Resultado: {result}\n")
-                response.write("Iteración\tXant\tXact\tError\n")
-                for row in iteraciones:
+                response.write("Iteración\tXi\tXn\tError\n")
+                for row in iterations:
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
+            # Graficar la convergencia
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(iter_nums, x_ants, 'ro-', label='Convergencia del método de Punto Fijo')
+            ax.set_xlabel('Iteraciones')
+            ax.set_ylabel('Valores de $X_{ant}$')
+            ax.set_title('Convergencia del método de Punto Fijo')
+            ax.grid(True)
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
+            context['result'] = result
+            context['iterations'] = iterations
             context['form'] = form
             context['image'] = uri
 
