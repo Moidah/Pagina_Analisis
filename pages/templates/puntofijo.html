@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% block title %}Método de Punto Fijo{% endblock %}
 
 {% block content %}
@@ -15,9 +14,8 @@
     <button type="submit" class="btn">Calcular</button>
 </form>
 
-{% if result %}
-    <h2>Resultado:</h2>
-    <p>{{ result }}</p>
+{% if error %}
+    <div class="error">{{ error }}</div>
 {% endif %}
 
 {% if iterations %}
@@ -26,8 +24,8 @@
         <thead>
             <tr>
                 <th>Iteración</th>
-                <th>Xant</th>
-                <th>Xact</th>
+                <th>X0</th>
+                <th>F(X0)</th>
                 <th>Error</th>
             </tr>
         </thead>

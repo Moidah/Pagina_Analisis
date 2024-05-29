@@ -185,10 +185,10 @@ class BiseccionPageView(TemplateView):
 #---------PUNTO_FIJO--------------------
 # Formulario para el método de punto fijo
 class PuntoFijoForm(forms.Form):
-    xi = forms.FloatField(label='Xi', required=True)
+    x0 = forms.FloatField(label='X0', required=True)
     tol = forms.FloatField(label='Tol', required=True)
-    niter = forms.IntegerField(label='Niter', required=True)
-    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    Nmax = forms.IntegerField(label='Nmax', required=True)
+    g = forms.CharField(label='Function g(x)', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función g(x)'}))
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
 
 class PuntoFijoPageView(TemplateView):
@@ -205,57 +205,52 @@ class PuntoFijoPageView(TemplateView):
         if form.is_valid():
             xi = form.cleaned_data['xi']
             tol = form.cleaned_data['tol']
-            niter = form.cleaned_data['niter']
-            fun = form.cleaned_data['fun']
+            Nmax = form.cleaned_data['Nmax']
+            g_str = form.cleaned_data['g']
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            g = sp.sympify(fun)
-            fi = g.subs(x, xi)
-            iterations = []
-            iter_nums = []
-            x_ants = []
-            
-            c = 0
-            error = tol + 1
-            while error > tol and c < niter:
-                xn = g.subs(x, xi)
-                error = abs(xn - xi)
-                iterations.append([c, float(xi), float(xn), float(error)])
-                iter_nums.append(c)
-                x_ants.append(float(xi))
-                xi = xn
-                c += 1
+            g = sp.sympify(g_str)
+            f = (x)**2 - 100
 
-            result = f"El método convergió a {float(xi)} en {c} iteraciones con un error de {float(error)}."
+            def Cre_o_Decre(f, x0):
+                return sp.diff(f, x).subs(x, x0) > 0
+
+            def PuntoFijo(g, x0, tol, Nmax):
+                # Inicialización
+                xant = x0
+                E = 1000
+                cont = 0
+                iteraciones = []
+                
+                # Ciclo
+                while E > tol and cont < Nmax:
+                    xact = g.subs(x, xant)
+                    E = abs(xact - xant)
+                    cont += 1
+                    iteraciones.append((cont, xant, xact, E))
+                    xant = xact
+
+                return [xact, cont, E], iteraciones
+
+            creciente = Cre_o_Decre(f, x0)
+            (xact, cont, E), iteraciones = PuntoFijo(g, x0, tol, Nmax)
+            result = f"Convergió a {xact} con una tolerancia de {tol}" if E < tol else f"No convergió después de {Nmax} iteraciones"
+
+            context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
+            context['result'] = result
+            context['iterations'] = iteraciones
 
             if export:
                 response = HttpResponse(content_type='text/plain')
-                response['Content-Disposition'] = 'attachment; filename="resultados_punto_fijo.txt"'
+                response['Content-Disposition'] = 'attachment; filename="resultados_puntofijo.txt"'
+                response.write(f"{context['creciente']}\n")
                 response.write(f"Resultado: {result}\n")
-                response.write("Iteración\tXi\tXn\tError\n")
-                for row in iterations:
+                response.write("Iteración\tXant\tXact\tError\n")
+                for row in iteraciones:
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
-            # Graficar la convergencia
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.plot(iter_nums, x_ants, 'ro-', label='Convergencia del método de Punto Fijo')
-            ax.set_xlabel('Iteraciones')
-            ax.set_ylabel('Valores de $X_{ant}$')
-            ax.set_title('Convergencia del método de Punto Fijo')
-            ax.grid(True)
-            plt.legend()
-
-            # Guardar la figura en un buffer
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png')
-            buf.seek(0)
-            string = base64.b64encode(buf.read())
-            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
-
-            context['result'] = result
-            context['iterations'] = iterations
             context['form'] = form
             context['image'] = uri
 
@@ -372,12 +367,11 @@ class ReglaFalsaPageView(TemplateView):
 
 #----------NEWTON----------------------
 class NewtonForm(forms.Form):
-    x0 = forms.FloatField(label='X0', required=True)
-    tol = forms.FloatField(label='Tol', required=True)
-    Nmax = forms.IntegerField(label='Nmax', required=True)
-    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    x0 = forms.FloatField(label='Valor inicial X0', required=True)
+    tol = forms.FloatField(label='Tolerancia', required=True)
+    niter = forms.IntegerField(label='Número máximo de iteraciones', required=True)
+    fun = forms.CharField(label='Función', required=True)
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
-
 class NewtonPageView(TemplateView):
     template_name = 'newton.html'
 
@@ -392,52 +386,52 @@ class NewtonPageView(TemplateView):
         if form.is_valid():
             x0 = form.cleaned_data['x0']
             tol = form.cleaned_data['tol']
-            Nmax = form.cleaned_data['Nmax']
+            niter = form.cleaned_data['niter']
             fun_str = form.cleaned_data['fun']
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
             f = sp.sympify(fun_str)
 
-            def Newton(f, x0, tol, Nmax):
-                xant = x0
-                fant = f.subs(x, xant)
-                E = 1000
-                cont = 0
+            def newton(x0, tol, niter, f):
                 iteraciones = []
+                i = 0
+                error = tol + 1
+                iteraciones.append([i, x0, f.subs(x, x0), error])
+                try:
+                    diff_x = sp.diff(f, x)
+                except:
+                    return "Error: No se pudo derivar la función", iteraciones
+                
+                try:
+                    while i < niter and error > tol and f.subs(x, x0) != 0:
+                        eval_diff = diff_x.subs(x, x0)
+                        xn = x0 - (f.subs(x, x0) / eval_diff)
+                        i += 1
+                        error = abs(xn - x0)
+                        iteraciones.append([i, xn, f.subs(x, xn), error])
+                        x0 = xn
+                    return None, iteraciones
+                except:
+                    return "Error: Problema con la derivada durante la iteración", iteraciones
 
-                while E > tol and cont < Nmax:
-                    xact = xant - fant / (sp.diff(f, x).subs(x, xant))
-                    fact = f.subs(x, xact)
-                    E = abs(xact - xant)
-                    cont += 1
-                    iteraciones.append((cont, float(xant), float(xact), float(fact), float(E)))
-                    xant = xact
-                    fant = fact
-
-                return [float(xact), cont, float(E)], iteraciones
-
-            result, iteraciones = Newton(f, x0, tol, Nmax)
+            error_message, iteraciones = newton(x0, tol, niter, f)
 
             if export:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_newton.txt"'
-                response.write(f"Raíz aproximada: {result[0]}\n")
-                response.write(f"Número de iteraciones: {result[1]}\n")
-                response.write(f"Error: {result[2]}\n")
-                response.write("Iteración\tXant\tXact\tf(Xact)\tError\n")
+                response.write("Iteración\tX0\tF(X0)\tTolerancia\n")
                 for row in iteraciones:
-                    response.write("\t".join(map(str, row)) + "\n")
+                    response.write(f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\n")
                 return response
 
-            context['result'] = result
+            context['error'] = error_message
             context['iterations'] = iteraciones
             context['form'] = form
         else:
             context['form'] = form
 
         return render(request, self.template_name, context)
-    
 
 #---------SECANTE---------------------------------
 class SecanteForm(forms.Form):
