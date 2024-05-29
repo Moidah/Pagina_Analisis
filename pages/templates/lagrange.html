@@ -22,6 +22,11 @@
     <p>{{ expr }}</p>
 {% endif %}
 
+{% if image %}
+    <h2>Gráfica de la interpolación de Lagrange:</h2>
+    <img src="{{ image }}" alt="Gráfica de la interpolación de Lagrange">
+{% endif %}
+
 <script>
 function generateInputs() {
     const n = document.getElementById('id_n').value;
