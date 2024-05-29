@@ -1,9 +1,13 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Método de Raíces Múltiples{% endblock %}
 
 {% block content %}
 <h1>Método de Raíces Múltiples</h1>
+<p>Los métodos anteriores tienen problemas cuando la función tiene varias soluciones, lo que se denomina por raíces múltiples. Para resolver este tipo de funciones de multiplicidad m se usa una de las siguientes relaciónes iterativas:</p>
+<img src="{% static 'images/raices_multiples.png' %}" alt="Raíces Múltiples">
+<img src="{% static 'images/raices_multiples1.png' %}" alt="Raíces Múltiples 1">
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

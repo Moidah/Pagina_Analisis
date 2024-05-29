@@ -4,6 +4,10 @@
 
 {% block content %}
 <h1>Método de la Secante</h1>
+<p>El método de la secante es una técnica iterativa para encontrar las raíces de una función f(x) =0. A diferencia del método de Newton, no requiere la derivada de la función, lo que lo hace útil cuando f'(x) no es fácilmente calculable. Por lo que usa una aproximación de la derivada</p>
+<li>Se necesitan dos puntos iniciales x0 y x1 cercanos a la raíz real</li>
+<li>La función debe ser continua en el intervalo que contiene a x0 y x1.</li>
+<li>Idealmente, la función debe ser una función suave (diferenciable) en este intervalo</li>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

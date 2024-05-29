@@ -238,7 +238,7 @@ class ReglaFalsaForm(forms.Form):
     xs = forms.FloatField(label="Xs")
     tol = forms.FloatField(label="Tolerancia")
     n = forms.IntegerField(label="Número de Iteraciones")
-    fun = forms.CharField(label="Función", widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    fun = forms.CharField(label="Función", max_length=100)
     export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
 class ReglaFalsaPageView(TemplateView):
     template_name = 'reglafalsa.html'
@@ -260,54 +260,60 @@ class ReglaFalsaPageView(TemplateView):
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            fun = sp.sympify(fun_str)
+            fun = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
 
-            def regla_falsa(F, a, b, tol, max_iter=1000):
-                i = 0
-                fa = F.subs(x, a).evalf()
-                fb = F.subs(x, b).evalf()
-                c_0 = 0
-                c_1 = (a * fb - b * fa) / (fb - fa)
-                fc = F.subs(x, c_1).evalf()
-                err = abs(c_1 - c_0)
-                data = [[i, err, a, fa, b, fb, c_1, fc]]
-
-                while err > tol and i < max_iter:
-                    c_0 = c_1
-                    i += 1
-                    fa = F.subs(x, a).evalf()
-                    fb = F.subs(x, b).evalf()
-                    c_1 = a - (fa * (b - a)) / (fb - fa)
-                    fc = F.subs(x, c_1).evalf()
-
-                    if fa * fc < 0:
-                        b = c_1
-                        fb = fc
+            def ReglaF(xi, xs, tol, n, f):
+                fxi = f(xi)
+                fxs = f(xs)
+                table = []
+                if fxi == 0:
+                    return xi, table
+                elif fxs == 0:
+                    return xs, table
+                elif fxi * fxs < 0:
+                    xm = xi - ((fxi * (xs - xi))) / (fxs - fxi)
+                    fxm = f(xm)
+                    i = 1
+                    error = tol + 1
+                    while error > tol and abs(fxm) > tol and fxm != 0 and i < n:
+                        row = [i, xi, xs, xm, fxm, error]
+                        table.append(row)
+                        if fxi * fxm < 0:
+                            xs = xm
+                            fxs = fxm
+                        else:
+                            xi = xm
+                            fxi = fxm
+                        xaux = xm
+                        xm = xi - ((fxi * (xs - xi)) / (fxs - fxi))
+                        fxm = f(xm)
+                        error = np.abs(xm - xaux)
+                        i += 1
+                    row = [i, xi, xs, xm, fxm, error]
+                    table.append(row)
+                    if fxm == 0:
+                        return [xm, "Error de " + str(0)], table
+                    elif error < tol:
+                        return [xm, "Error de " + str(error)], table
                     else:
-                        a = c_1
-                        fa = fc
+                        return ["Fracasó en " + str(n) + " iteraciones"], table
+                else:
+                    return ["Intervalo inadecuado"], table
 
-                    err = abs(c_1 - c_0)
-                    data.append([i, err, a, fa, b, fb, c_1, fc])
-
-                if i == max_iter:
-                    print("Warning: Maximum number of iterations reached without convergence.")
-
-                return data
-
-            iterations = regla_falsa(fun, xi, xs, tol, n)
-            result = iterations[-1] if iterations else []
+            result, table = ReglaF(xi, xs, tol, n, fun)
 
             if export:
                 response = HttpResponse(content_type='text/plain')
                 response['Content-Disposition'] = 'attachment; filename="resultados_reglafalsa.txt"'
-                response.write("Iteración\tTolerancia\tA\tF(A)\tB\tF(B)\tC\tF(C)\n")
-                for row in iterations:
+                response.write(f"Raíz aproximada: {result[0]}\n")
+                response.write(f"{result[1]}\n")
+                response.write("Iteración\tXi\tXs\tXm\tf(Xm)\tError\n")
+                for row in table:
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
             context['result'] = result
-            context['iterations'] = iterations
+            context['table'] = table
             context['form'] = form
         else:
             context['form'] = form

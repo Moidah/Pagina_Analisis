@@ -4,8 +4,11 @@
 
 {% block content %}
 <h1>Método de Bisección</h1>
-<p>Esta es la página del Método de Bisección.  se ingresa el valor inicial y final del intervalo (xi, xs), la tolerancia del error (Tol) y el màximo nùmero de iteraciones (niter).</p>
+<p>Este método parte de un intervalo dado [a,b], donde se sabe que existe al menos una raíz real para f(x)=0 , donde “f” es una función continua. Para poder aplicar este método se debe cumplir la condición f(a)*f(b) <0, lo cual implica que hay un cambio de signo dentro del intervalo </p>
+<p>Indique el intervalo, recuerde que a debe ser menor a b y que se debe cumplir la condición  f(a)*f(b) <0. </p>
+
 <form method="post">
+    <p>Indique su función f, recuerde que debe ser continua en el intervalo.</p>
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit" class="btn">Calcular</button>

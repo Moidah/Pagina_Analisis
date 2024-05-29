@@ -4,41 +4,35 @@
 
 {% block content %}
 <h1>Método de la Regla Falsa</h1>
+<p>Este método parte de un intervalo dado [a,b], donde se sabe que existe al menos una raíz real para f(x)=0 , donde “f” es una función continua. Para poder aplicar este método se debe cumplir la condición f(a)*f(b) <0, lo cual implica que hay un cambio de signo dentro del intervalo.</p>
+<p>Indique el intervalo, recuerde que a debe ser menor a b y que se debe cumplir la condición  f(a)*f(b) <0.</p>
 <form method="post">
     {% csrf_token %}
+    <p>Indique su función f, recuerde que debe ser continua en el intervalo.</p>
     {{ form.as_p }}
     <button type="submit" class="btn">Calcular</button>
 </form>
 
 {% if result %}
     <h2>Resultado:</h2>
-    <p>Última Iteración: {{ result.0 }}</p>
-    <p>Tolerancia: {{ result.1 }}</p>
-    <p>A: {{ result.2 }}</p>
-    <p>F(A): {{ result.3 }}</p>
-    <p>B: {{ result.4 }}</p>
-    <p>F(B): {{ result.5 }}</p>
-    <p>C: {{ result.6 }}</p>
-    <p>F(C): {{ result.7 }}</p>
+    <p>{{ result }}</p>
 {% endif %}
 
-{% if iterations %}
+{% if table %}
     <h2>Tabla de Resultados:</h2>
     <table>
         <thead>
             <tr>
                 <th>Iteración</th>
-                <th>Tolerancia</th>
-                <th>A</th>
-                <th>F(A)</th>
-                <th>B</th>
-                <th>F(B)</th>
-                <th>C</th>
-                <th>F(C)</th>
+                <th>Xi</th>
+                <th>Xs</th>
+                <th>Xm</th>
+                <th>f(Xm)</th>
+                <th>Error</th>
             </tr>
         </thead>
         <tbody>
-            {% for row in iterations %}
+            {% for row in table %}
                 <tr>
                     <td>{{ row.0 }}</td>
                     <td>{{ row.1 }}</td>
@@ -46,8 +40,6 @@
                     <td>{{ row.3 }}</td>
                     <td>{{ row.4 }}</td>
                     <td>{{ row.5 }}</td>
-                    <td>{{ row.6 }}</td>
-                    <td>{{ row.7 }}</td>
                 </tr>
             {% endfor %}
         </tbody>

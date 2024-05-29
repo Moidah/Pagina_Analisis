@@ -4,6 +4,11 @@
 
 {% block content %}
 <h1>Método de Punto Fijo</h1>
+<p>Este método permite hallar la solución aproximada a f(x)=0 a partir de un punto inicial x0 y una función g(x) que debe cumplir las siguientes condiciones para que g tenga un único punto fijo en [a,b]:</p>
+    <li>Es continua en el intervalo [a,b]</li>
+    <li>Para todo x[a,b], g(x) [a,b] y g'(x) [a,b] existe.</li>
+    <li>Para todo x[a,b],| g'(x)|k<1</li> 
+<p>La ecuación f(x)=0 se puede escribir como x = g(x), el método realiza la relación iterativa xn= g(xn-1) hasta que se cumpla la tolerancia.  </p>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

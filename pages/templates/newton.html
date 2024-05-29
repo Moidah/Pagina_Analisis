@@ -4,6 +4,10 @@
 
 {% block content %}
 <h1>Método de Newton</h1>
+<p>El Método de Newton, también conocido como método de Newton-Raphson, es una técnica para encontrar raíces de una función. El Método de Newton siempre encontrará la raíz si el punto inicial x0está suficientemente cerca de la raíz verdadera xv  y si se cumplen las siguientes condiciones:</p>
+    <li>f debe ser derivable dos veces.</li>
+    <li>La primera derivada debe ser diferente de 0</li>
+    
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
