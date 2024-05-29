@@ -4,6 +4,9 @@
 
 {% block content %}
 <h1>Métodos</h1>
+<p> IMPORTANTE: Todas las funciones y derivadas se tienen que ingresar como entradas de python:</p>
+<li>Para exponentes se ulitiza ** por ejemplo: x**2</li>
+<li>Para multiplicar solo se utiliza uno por ejemplo: 2*x</li>
 <h2> Metodos del capitulo 1 </h2>
 <p>Seleccione un método:</p>
 <div class="buttons-container">
@@ -23,6 +26,7 @@
     <a class="btn" href="{% url 'sor_matricial' %}">Método de SOR Matricial</a>
 </div>
 <h2> Metodos del capitulo 3 </h2>
+<p>IMPORTANTE: EN ESTOS MÉTODOS UN MISMO VALOR DE X NO PUEDE TENER VARIOS VALORES DE Y.<p>
 <p>Seleccione un método:</p>
 <div class="buttons-container">
     <a class="btn" href="{% url 'vandermonde' %}">Método de vandermonde</a>

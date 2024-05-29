@@ -5,6 +5,9 @@
 {% block content %}
 <div class="container mt-5">
     <h1 class="mb-4">Método Jacobi</h1>
+    <p>Resuelve sistemas ecuaciones Ax = b en forma matricial y no matricial</p>
+    <p>El método converge a la solución única si el radio espectral de T es menor a 1 y si A es estrictamente diagonalmente dominante.</p>
+
     <form method="post" id="matrixForm">
         {% csrf_token %}
         {{ form.as_p }}

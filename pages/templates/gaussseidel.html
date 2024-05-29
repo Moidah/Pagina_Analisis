@@ -4,6 +4,8 @@
 
 {% block content %}
 <h1>Método de Gauss-Seidel</h1>
+<p>El método converge a la solución única si el radio espectral de T es menor a 1 y si A es estrictamente diagonalmente dominante.</p>
+<p>IMPORTANTE: En estos métodos no pueden haber ceros en la diagonal principal porque luego A no es invertible!!! Se deben hacer transformaciones de fila.</p>
 <form method="post" id="matrixForm">
     {% csrf_token %}
     {{ form.as_p }}
