@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}Método de Newton Interpolante{% endblock %}
 
 {% block content %}
 <h1>Método de Newton Interpolante</h1>
+<P>El polinomio interpolador de Newton tiene la forma:</p>
+    <img src="{% static 'images/newton.png' %}" alt="newton">
+<p>Ingrese los puntos (puede ser todos los x en un vector y todos los y en otro).</p>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

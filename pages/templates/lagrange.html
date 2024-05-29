@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}Método de Lagrange{% endblock %}
 
 {% block content %}
 <h1>Método de Lagrange</h1>
+<p>El polinomio de Lagrange tiene la siguiente forma:</p>
+<img src="{% static 'images/lagrange.png' %}" alt="lagrange">
 <form method="post" id="lagrangeForm">
     {% csrf_token %}
     {{ form.as_p }}

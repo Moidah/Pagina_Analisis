@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}Método de Vandermonde{% endblock %}
 
 {% block content %}
 <h1>Método de Vandermonde</h1>
+<p>Dados n+1 puntos, existe un único polinomio de grado a la sumo n de la forma:</p>
+    <img src="{% static 'images/vandermonde.png' %}" alt="vandermonde">
+<p>Esto resulta en un sistema de n+1 ecuaciones lineales con n+1 incógnitas donde los coeficientes a1,...,an son las incógnitas. Como se sabe p(xi)=yi, se puede construir el sistema. </p>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
