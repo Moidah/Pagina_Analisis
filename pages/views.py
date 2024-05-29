@@ -185,22 +185,13 @@ class BiseccionPageView(TemplateView):
 #---------PUNTO_FIJO--------------------
 # Formulario para el método de punto fijo
 class PuntoFijoForm(forms.Form):
-    xi = forms.FloatField(label='Xi', required=True)
-    tol = forms.FloatField(label='Tol', required=True)
-    niter = forms.IntegerField(label='Niter', required=True)
-    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    x0 = forms.FloatField(label='Valor inicial X0', required=True)
+    tol = forms.FloatField(label='Tolerancia', required=True)
+    niter = forms.IntegerField(label='Número máximo de iteraciones', required=True)
+    fun = forms.CharField(label='Función f(x)', required=True)
+    g = forms.CharField(label='Función g(x)', required=True)
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
 
-# Formulario para el método de la Regla Falsa
-class ReglaFalsaForm(forms.Form):
-    xi = forms.FloatField(label='Xi', required=True)
-    xs = forms.FloatField(label='Xs', required=True)
-    tol = forms.FloatField(label='Tol', required=True)
-    niter = forms.IntegerField(label='Niter', required=True)
-    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
-    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
-
-# Vista para el método de punto fijo
 class PuntoFijoPageView(TemplateView):
     template_name = 'puntofijo.html'
 
@@ -213,48 +204,57 @@ class PuntoFijoPageView(TemplateView):
         form = PuntoFijoForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            xi = form.cleaned_data['xi']
+            x0 = form.cleaned_data['x0']
             tol = form.cleaned_data['tol']
             niter = form.cleaned_data['niter']
-            fun = form.cleaned_data['fun']
+            f_str = form.cleaned_data['fun']
+            g_str = form.cleaned_data['g']
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            g = sp.sympify(fun)
-            fi = g.subs(x, xi)
-            iterations = []
-            iter_nums = []
-            x_ants = []
-            
-            c = 0
-            error = tol + 1
-            while error > tol and c < niter:
-                xn = g.subs(x, xi)
-                error = abs(xn - xi)
-                iterations.append([c, float(xi), float(xn), float(error)])
-                iter_nums.append(c)
-                x_ants.append(float(xi))
-                xi = xn
-                c += 1
+            f = sp.sympify(f_str)
+            g = sp.sympify(g_str)
 
-            result = f"El método convergió a {float(xi)} en {c} iteraciones con un error de {float(error)}."
+            def punto_fijo(f, g, x0, tol, niter):
+                iteraciones = []
+                i = 0
+                error = tol + 1
+                iteraciones.append([i, x0, f.subs(x, x0), error])
+                while i < niter and error > tol:
+                    xn = g.subs(x, x0)
+                    i += 1
+                    error = abs(xn - x0)
+                    iteraciones.append([i, xn, f.subs(x, xn), error])
+                    x0 = xn
+                return iteraciones
+
+            iteraciones = punto_fijo(f, g, x0, tol, niter)
+            result = iteraciones[-1][1] if iteraciones else []
 
             if export:
                 response = HttpResponse(content_type='text/plain')
-                response['Content-Disposition'] = 'attachment; filename="resultados_punto_fijo.txt"'
-                response.write(f"Resultado: {result}\n")
-                response.write("Iteración\tXi\tXn\tError\n")
-                for row in iterations:
-                    response.write("\t".join(map(str, row)) + "\n")
+                response['Content-Disposition'] = 'attachment; filename="resultados_puntofijo.txt"'
+                response.write("Iteración\tX0\tF(X0)\tTolerancia\n")
+                for row in iteraciones:
+                    response.write(f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\n")
                 return response
 
-            # Graficar la convergencia
+            # Graficar la función y las iteraciones
+            x_vals = np.linspace(x0 - 2, x0 + 2, 400)
+            y_vals = [float(f.subs(x, val)) for val in x_vals]
+
+            iter_x = [row[1] for row in iteraciones]
+            iter_y = [float(f.subs(x, val)) for val in iter_x]
+
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.plot(iter_nums, x_ants, 'ro-', label='Convergencia del método de Punto Fijo')
-            ax.set_xlabel('Iteraciones')
-            ax.set_ylabel('Valores de $X_{ant}$')
-            ax.set_title('Convergencia del método de Punto Fijo')
-            ax.grid(True)
+            ax.plot(x_vals, y_vals, label=f'f(x) = {f_str}', color='blue')
+            ax.plot(iter_x, iter_y, 'ro-', label='Iteraciones')
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')
+            ax.set_ylabel('f(x)')
+            ax.set_title('Gráfica de la función y el proceso de Punto Fijo')
             plt.legend()
 
             # Guardar la figura en un buffer
@@ -265,7 +265,7 @@ class PuntoFijoPageView(TemplateView):
             uri = 'data:image/png;base64,' + urllib.parse.quote(string)
 
             context['result'] = result
-            context['iterations'] = iterations
+            context['iterations'] = iteraciones
             context['form'] = form
             context['image'] = uri
 
@@ -385,8 +385,9 @@ class NewtonForm(forms.Form):
     x0 = forms.FloatField(label='Valor inicial X0', required=True)
     tol = forms.FloatField(label='Tolerancia', required=True)
     niter = forms.IntegerField(label='Número máximo de iteraciones', required=True)
-    fun = forms.CharField(label='Función', required=True)
+    fun = forms.CharField(label='Función f(x)', required=True)
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
+
 class NewtonPageView(TemplateView):
     template_name = 'newton.html'
 
@@ -402,35 +403,32 @@ class NewtonPageView(TemplateView):
             x0 = form.cleaned_data['x0']
             tol = form.cleaned_data['tol']
             niter = form.cleaned_data['niter']
-            fun_str = form.cleaned_data['fun']
+            f_str = form.cleaned_data['fun']
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            f = sp.sympify(fun_str)
+            f = sp.sympify(f_str)
+            df = sp.diff(f, x)
 
-            def newton(x0, tol, niter, f):
+            def newton(f, df, x0, tol, niter):
                 iteraciones = []
                 i = 0
                 error = tol + 1
                 iteraciones.append([i, x0, f.subs(x, x0), error])
-                try:
-                    diff_x = sp.diff(f, x)
-                except:
-                    return "Error: No se pudo derivar la función", iteraciones
-                
-                try:
-                    while i < niter and error > tol and f.subs(x, x0) != 0:
-                        eval_diff = diff_x.subs(x, x0)
-                        xn = x0 - (f.subs(x, x0) / eval_diff)
-                        i += 1
-                        error = abs(xn - x0)
-                        iteraciones.append([i, xn, f.subs(x, xn), error])
-                        x0 = xn
-                    return None, iteraciones
-                except:
-                    return "Error: Problema con la derivada durante la iteración", iteraciones
+                while i < niter and error > tol:
+                    fx = f.subs(x, x0)
+                    dfx = df.subs(x, x0)
+                    if dfx == 0:
+                        break
+                    xn = x0 - fx / dfx
+                    i += 1
+                    error = abs(xn - x0)
+                    iteraciones.append([i, xn, f.subs(x, xn), error])
+                    x0 = xn
+                return iteraciones
 
-            error_message, iteraciones = newton(x0, tol, niter, f)
+            iteraciones = newton(f, df, x0, tol, niter)
+            result = iteraciones[-1][1] if iteraciones else []
 
             if export:
                 response = HttpResponse(content_type='text/plain')
@@ -440,9 +438,36 @@ class NewtonPageView(TemplateView):
                     response.write(f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\n")
                 return response
 
-            context['error'] = error_message
+            # Graficar la función y las iteraciones
+            x_vals = np.linspace(x0 - 2, x0 + 2, 400)
+            y_vals = [float(f.subs(x, val)) for val in x_vals]
+
+            iter_x = [row[1] for row in iteraciones]
+            iter_y = [float(f.subs(x, val)) for val in iter_x]
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(x_vals, y_vals, label=f'f(x) = {f_str}', color='blue')
+            ax.plot(iter_x, iter_y, 'ro', label='Iteraciones')  # Graficar solo puntos
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')
+            ax.set_ylabel('f(x)')
+            ax.set_title('Gráfica de la función y el proceso del Método de Newton')
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
+            context['result'] = result
             context['iterations'] = iteraciones
             context['form'] = form
+            context['image'] = uri
+
         else:
             context['form'] = form
 
@@ -456,7 +481,7 @@ class SecanteForm(forms.Form):
     n = forms.IntegerField(label='Niter', required=True)
     fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
-    
+
 class SecantePageView(TemplateView):
     template_name = 'secante.html'
 
@@ -531,14 +556,39 @@ class SecantePageView(TemplateView):
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
+            # Graficar la función y las iteraciones
+            x_vals = np.linspace(min(x0, x1) - 2, max(x0, x1) + 2, 400)
+            y_vals = [f(val) for val in x_vals]
+
+            iter_x = [row[2] for row in table]
+            iter_y = [f(val) for val in iter_x]
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(x_vals, y_vals, label=f'f(x) = {fun_str}', color='blue')
+            ax.plot(iter_x, iter_y, 'ro', label='Iteraciones')  # Graficar solo puntos
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')
+            ax.set_ylabel('f(x)')
+            ax.set_title('Gráfica de la función y el proceso del Método de la Secante')
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
             context['result'] = result
             context['table'] = table
             context['form'] = form
+            context['image'] = uri
         else:
             context['form'] = form
 
         return render(request, self.template_name, context)
-
 
 #------------Raices_Multiples-----------------------------
 
@@ -550,6 +600,7 @@ class RaicesMultiplesForm(forms.Form):
     deriv1 = forms.CharField(label='First Derivative', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la primera derivada en términos de x'}))
     deriv2 = forms.CharField(label='Second Derivative', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la segunda derivada en términos de x'}))
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
+
 class RaicesMultiplesPageView(TemplateView):
     template_name = 'raicesmultiples.html'
 
@@ -625,14 +676,39 @@ class RaicesMultiplesPageView(TemplateView):
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
+            # Graficar la función y las iteraciones
+            x_vals = np.linspace(x0 - 2, x0 + 2, 400)
+            y_vals = [f.subs(x, val) for val in x_vals]
+
+            iter_x = [row[2] for row in table]
+            iter_y = [f.subs(x, val) for val in iter_x]
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(x_vals, y_vals, label=f'f(x) = {fun_str}', color='blue')
+            ax.plot(iter_x, iter_y, 'ro', label='Iteraciones')  # Graficar solo puntos
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')
+            ax.set_ylabel('f(x)')
+            ax.set_title('Gráfica de la función y el proceso del Método de Raíces Múltiples')
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
             context['result'] = result
             context['table'] = table
             context['form'] = form
+            context['image'] = uri
         else:
             context['form'] = form
 
         return render(request, self.template_name, context)
-    
     
 #------------------GaussSeidel----------------------------- 
 class GaussSeidelForm(forms.Form):
@@ -973,8 +1049,9 @@ class SORMatricialPageView(TemplateView):
 #-------------------Vandermonde----------------------------
 
 class VandermondeForm(forms.Form):
-    n = forms.IntegerField(label="Número de puntos")
-    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
+    x_vals = forms.CharField(label='X values', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese los valores de x separados por comas'}))
+    y_vals = forms.CharField(label='Y values', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese los valores de y separados por comas'}))
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
 
 class VandermondePageView(TemplateView):
     template_name = 'vandermonde.html'
@@ -988,30 +1065,61 @@ class VandermondePageView(TemplateView):
         form = VandermondeForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            n = form.cleaned_data['n']
-            xs = [float(request.POST.get(f'xs_{i}')) for i in range(n)]
-            y = [float(request.POST.get(f'y_{i}')) for i in range(n)]
+            try:
+                x_vals = list(map(float, form.cleaned_data['x_vals'].split(',')))
+                y_vals = list(map(float, form.cleaned_data['y_vals'].split(',')))
+                export = form.cleaned_data['export']
+            except ValueError:
+                context['error'] = "Asegúrate de que los valores de x e y están bien formateados y separados por comas."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
-            def vandermonde(xs, y, n):
-                x = sp.symbols('x')
-                A = np.array([[i**j for j in range(n-1, -1, -1)] for i in xs])
-                C = np.linalg.inv(A) @ np.transpose(y)
-                C = C[::-1]
-                expr = 0
-                funcion = "F(x)="
-                for i in range(n-1, -1, -1):
-                    if i == 0:
-                        expr += C[i]
-                        funcion += str(C[i])
-                        break
-                    expr += C[i] * x**i
-                    funcion += str(C[i]) + "x^" + str(i) + "+"
-                return funcion, expr
+            if len(x_vals) != len(y_vals):
+                context['error'] = "El número de valores de x y y deben ser iguales."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
-            funcion, expr = vandermonde(xs, y, n)
-            context['funcion'] = funcion
-            context['expr'] = expr
+            n = len(x_vals)
+            A = np.vander(x_vals, increasing=True)
+            coeffs = np.linalg.solve(A, y_vals)
+
+            # Crear la función de interpolación
+            x = sp.symbols('x')
+            poly = sum(sp.Rational(c) * x**i for i, c in enumerate(coeffs))
+
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_vandermonde.txt"'
+                response.write("Coeficientes del polinomio de interpolación:\n")
+                response.write(f"{coeffs}\n")
+                return response
+
+            # Graficar los puntos y el polinomio de interpolación
+            x_plot = np.linspace(min(x_vals) - 1, max(x_vals) + 1, 400)
+            y_plot = [poly.subs(x, val) for val in x_plot]
+            y_plot = np.array(y_plot, dtype=float)
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(x_plot, y_plot, label=f'Polinomio de interpolación', color='blue')
+            ax.plot(x_vals, y_vals, 'ro', label='Puntos de interpolación')  # Graficar solo puntos
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')
+            ax.set_ylabel('f(x)')
+            ax.set_title('Gráfica de la interpolación de Vandermonde')
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
+            context['coeffs'] = coeffs
             context['form'] = form
+            context['image'] = uri
         else:
             context['form'] = form
 

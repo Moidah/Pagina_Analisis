@@ -42,4 +42,8 @@ function generateInputs() {
     document.getElementById('vectorInputs').innerHTML = vectorInputs;
 }
 </script>
+{% if image %}
+    <h2>Gráfica:</h2>
+    <img src="{{ image }}" alt="Gráfica de la interpolación de Vandermonde">
+{% endif %}
 {% endblock %}

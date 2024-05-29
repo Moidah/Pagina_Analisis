@@ -21,5 +21,4 @@ urlpatterns = [
     path('newton_interpolante/', NewtonInterpolantePageView.as_view(), name='newton_interpolante'),
     path('lagrange/', LagrangePageView.as_view(), name='lagrange'),
     path('spline/', SplineLinealPageView.as_view(), name='spline'),
-
 ]
