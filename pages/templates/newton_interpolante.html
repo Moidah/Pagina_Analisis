@@ -4,8 +4,8 @@
 
 {% block content %}
 <h1>Método de Newton Interpolante</h1>
-<P>El polinomio interpolador de Newton tiene la forma:</p>
-    <img src="{% static 'images/newton.png' %}" alt="newton">
+<p>El polinomio interpolador de Newton tiene la forma:</p>
+<img src="{% static 'images/newton.png' %}" alt="newton">
 <p>Ingrese los puntos (puede ser todos los x en un vector y todos los y en otro).</p>
 <form method="post">
     {% csrf_token %}
@@ -15,6 +15,10 @@
     <button type="submit" class="btn">Calcular</button>
 </form>
 
+{% if error %}
+    <div class="error">{{ error }}</div>
+{% endif %}
+
 {% if funcion %}
     <h2>Función Interpolante:</h2>
     <p>{{ funcion }}</p>
@@ -23,6 +27,11 @@
 {% if expr %}
     <h2>Expresión:</h2>
     <p>{{ expr }}</p>
+{% endif %}
+
+{% if image %}
+    <h2>Gráfica de la interpolación de Newton:</h2>
+    <img src="{{ image }}" alt="Gráfica de la interpolación de Newton">
 {% endif %}
 
 <script>

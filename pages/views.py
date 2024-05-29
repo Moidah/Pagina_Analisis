@@ -1145,11 +1145,17 @@ class NewtonInterpolantePageView(TemplateView):
         context = self.get_context_data()
         if form.is_valid():
             n = form.cleaned_data['n']
-            xs = [float(request.POST.get(f'xs_{i}')) for i in range(n)]
-            y = [float(request.POST.get(f'y_{i}')) for i in range(n)]
+            export = form.cleaned_data['export']
+            try:
+                xs = [float(request.POST.get(f'xs_{i}')) for i in range(n)]
+                y = [float(request.POST.get(f'y_{i}')) for i in range(n)]
+            except (TypeError, ValueError) as e:
+                context['error'] = "Asegúrate de que todos los valores de xs y y están correctamente ingresados y son números válidos."
+                context['form'] = form
+                return render(request, self.template_name, context)
 
             def newton_interpolante(xs, y, n):
-                x = sp.symbols('x')
+                x = sp.symbols("x")
                 dif_div = np.zeros((n, n + 1))
                 dif_div[:, 0] = xs
                 dif_div[:, 1] = y
@@ -1171,6 +1177,43 @@ class NewtonInterpolantePageView(TemplateView):
             context['funcion'] = funcion
             context['expr'] = expr
             context['form'] = form
+
+            # Graficar los puntos y el polinomio de interpolación
+            x_plot = np.linspace(min(xs) - 1, max(xs) + 1, 400)
+            y_plot = [expr.subs(sp.symbols('x'), val) for val in x_plot]
+            y_plot = np.array(y_plot, dtype=float)
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(x_plot, y_plot, label='Polinomio de interpolación', color='blue')
+            ax.plot(xs, y, 'ro', label='Puntos de interpolación')  # Graficar solo puntos
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')
+            ax.set_ylabel('f(x)')
+            ax.set_title('Gráfica de la interpolación de Newton')
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
+            context['image'] = uri
+
+            # Lógica de exportación
+            if export:
+                response = HttpResponse(content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="resultados_newton_interpolante.txt"'
+                response.write("Coeficientes del polinomio de interpolación de Newton:\n")
+                response.write(f"{expr}\n")
+                response.write("Puntos de interpolación:\n")
+                for i in range(n):
+                    response.write(f"x_{i}: {xs[i]}, y_{i}: {y[i]}\n")
+                return response
+
         else:
             context['form'] = form
 
