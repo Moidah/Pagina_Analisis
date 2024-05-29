@@ -1088,6 +1088,7 @@ class SplineForm(forms.Form):
     n = forms.IntegerField(label='Número de puntos', min_value=2, required=True)
     xs = forms.CharField(label='Valores de X (separados por comas)', required=True)
     y = forms.CharField(label='Valores de Y (separados por comas)', required=True)
+    export_txt = forms.BooleanField(label='Exportar resultados a TXT', required=False)
     
 
 class SplineLinealPageView(TemplateView):
@@ -1110,6 +1111,11 @@ class SplineLinealPageView(TemplateView):
 
             context['coeficientes'] = coef.tolist()
             context['polinomios'] = polinomios
+            context['form'] = form
+
+            if form.cleaned_data['export_txt']:
+                response = self.export_to_txt(coef, polinomios)
+                return response
         context['form'] = form
         return render(request, self.template_name, context)
 
@@ -1122,3 +1128,15 @@ class SplineLinealPageView(TemplateView):
             coef[i, :] = np.transpose(np.linalg.inv(A) @ B)
             polinomios.append(f"P{i+1}(x) = {round(coef[i][0], 4)}x + {round(coef[i][1], 4)}")
         return coef, polinomios
+
+    def export_to_txt(self, coef, polinomios):
+        content = 'Coeficientes:\n'
+        for row in coef:
+            content += f'{row[0]} {row[1]}\n'
+        content += '\nPolinomios:\n'
+        for poly in polinomios:
+            content += f'{poly}\n'
+        
+        response = HttpResponse(content, content_type='text/plain')
+        response['Content-Disposition'] = 'attachment; filename="resultados.txt"'
+        return response
