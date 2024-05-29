@@ -183,13 +183,14 @@ class BiseccionPageView(TemplateView):
         return render(request, self.template_name, context)
     
 #---------PUNTO_FIJO--------------------
+# Formulario para el método de punto fijo
 class PuntoFijoForm(forms.Form):
-    x0 = forms.FloatField(label='X0', required=True)
+    xi = forms.FloatField(label='Xi', required=True)
     tol = forms.FloatField(label='Tol', required=True)
-    Nmax = forms.IntegerField(label='Nmax', required=True)
-    g = forms.CharField(label='Function g(x)', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función g(x)'}))
+    niter = forms.IntegerField(label='Niter', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
     export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
-    
+
 class PuntoFijoPageView(TemplateView):
     template_name = 'puntofijo.html'
 
@@ -202,55 +203,62 @@ class PuntoFijoPageView(TemplateView):
         form = PuntoFijoForm(request.POST)
         context = self.get_context_data()
         if form.is_valid():
-            x0 = form.cleaned_data['x0']
+            xi = form.cleaned_data['xi']
             tol = form.cleaned_data['tol']
-            Nmax = form.cleaned_data['Nmax']
-            g_str = form.cleaned_data['g']
+            niter = form.cleaned_data['niter']
+            fun = form.cleaned_data['fun']
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            g = sp.sympify(g_str)
-            f = (x)**2 - 100
+            g = sp.sympify(fun)
+            fi = g.subs(x, xi)
+            iterations = []
+            iter_nums = []
+            x_ants = []
+            
+            c = 0
+            error = tol + 1
+            while error > tol and c < niter:
+                xn = g.subs(x, xi)
+                error = abs(xn - xi)
+                iterations.append([c, float(xi), float(xn), float(error)])
+                iter_nums.append(c)
+                x_ants.append(float(xi))
+                xi = xn
+                c += 1
 
-            def Cre_o_Decre(f, x0):
-                return sp.diff(f, x).subs(x, x0) > 0
-
-            def PuntoFijo(g, x0, tol, Nmax):
-                # Inicialización
-                xant = x0
-                E = 1000
-                cont = 0
-                iteraciones = []
-                
-                # Ciclo
-                while E > tol and cont < Nmax:
-                    xact = g.subs(x, xant)
-                    E = abs(xact - xant)
-                    cont += 1
-                    iteraciones.append((cont, xant, xact, E))
-                    xant = xact
-
-                return [xact, cont, E], iteraciones
-
-            creciente = Cre_o_Decre(f, x0)
-            (xact, cont, E), iteraciones = PuntoFijo(g, x0, tol, Nmax)
-            result = f"Convergió a {xact} con una tolerancia de {tol}" if E < tol else f"No convergió después de {Nmax} iteraciones"
-
-            context['creciente'] = "La función es creciente en el punto inicial" if creciente else "La función es decreciente en el punto inicial"
-            context['result'] = result
-            context['iterations'] = iteraciones
+            result = f"El método convergió a {float(xi)} en {c} iteraciones con un error de {float(error)}."
 
             if export:
                 response = HttpResponse(content_type='text/plain')
-                response['Content-Disposition'] = 'attachment; filename="resultados_puntofijo.txt"'
-                response.write(f"{context['creciente']}\n")
+                response['Content-Disposition'] = 'attachment; filename="resultados_punto_fijo.txt"'
                 response.write(f"Resultado: {result}\n")
-                response.write("Iteración\tXant\tXact\tError\n")
-                for row in iteraciones:
+                response.write("Iteración\tXi\tXn\tError\n")
+                for row in iterations:
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
+            # Graficar la convergencia
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(iter_nums, x_ants, 'ro-', label='Convergencia del método de Punto Fijo')
+            ax.set_xlabel('Iteraciones')
+            ax.set_ylabel('Valores de $X_{ant}$')
+            ax.set_title('Convergencia del método de Punto Fijo')
+            ax.grid(True)
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
+            context['result'] = result
+            context['iterations'] = iterations
             context['form'] = form
+            context['image'] = uri
+
         else:
             context['form'] = form
 
@@ -258,12 +266,13 @@ class PuntoFijoPageView(TemplateView):
 
 #---------Regla_Falsa-------------------
 class ReglaFalsaForm(forms.Form):
-    xi = forms.FloatField(label="Xi")
-    xs = forms.FloatField(label="Xs")
-    tol = forms.FloatField(label="Tolerancia")
-    n = forms.IntegerField(label="Número de Iteraciones")
-    fun = forms.CharField(label="Función", max_length=100)
-    export = forms.BooleanField(label="Exportar resultados a TXT", required=False)
+    xi = forms.FloatField(label='Xi', required=True)
+    xs = forms.FloatField(label='Xs', required=True)
+    tol = forms.FloatField(label='Tol', required=True)
+    niter = forms.IntegerField(label='Niter', required=True)
+    fun = forms.CharField(label='Function', required=True, widget=forms.TextInput(attrs={'placeholder': 'Ingrese la función en términos de x'}))
+    export = forms.BooleanField(label='Exportar resultados a TXT', required=False)
+
 class ReglaFalsaPageView(TemplateView):
     template_name = 'reglafalsa.html'
 
@@ -279,66 +288,83 @@ class ReglaFalsaPageView(TemplateView):
             xi = form.cleaned_data['xi']
             xs = form.cleaned_data['xs']
             tol = form.cleaned_data['tol']
-            n = form.cleaned_data['n']
-            fun_str = form.cleaned_data['fun']
+            niter = form.cleaned_data['niter']
+            fun = form.cleaned_data['fun']
             export = form.cleaned_data['export']
 
             x = sp.symbols('x')
-            fun = sp.lambdify(x, sp.sympify(fun_str), 'numpy')
+            f = sp.sympify(fun)
+            fi = f.subs(x, xi)
+            fs = f.subs(x, xs)
+            iterations = []
+            iter_nums = []
+            x_ants = []
 
-            def ReglaF(xi, xs, tol, n, f):
-                fxi = f(xi)
-                fxs = f(xs)
-                table = []
-                if fxi == 0:
-                    return xi, table
-                elif fxs == 0:
-                    return xs, table
-                elif fxi * fxs < 0:
-                    xm = xi - ((fxi * (xs - xi))) / (fxs - fxi)
-                    fxm = f(xm)
-                    i = 1
-                    error = tol + 1
-                    while error > tol and abs(fxm) > tol and fxm != 0 and i < n:
-                        row = [i, xi, xs, xm, fxm, error]
-                        table.append(row)
-                        if fxi * fxm < 0:
-                            xs = xm
-                            fxs = fxm
-                        else:
-                            xi = xm
-                            fxi = fxm
-                        xaux = xm
-                        xm = xi - ((fxi * (xs - xi)) / (fxs - fxi))
-                        fxm = f(xm)
-                        error = np.abs(xm - xaux)
-                        i += 1
-                    row = [i, xi, xs, xm, fxm, error]
-                    table.append(row)
-                    if fxm == 0:
-                        return [xm, "Error de " + str(0)], table
-                    elif error < tol:
-                        return [xm, "Error de " + str(error)], table
+            if fi * fs > 0:
+                result = "El intervalo no es adecuado"
+            else:
+                xm = xi - (fi * (xs - xi) / (fs - fi))
+                fxm = f.subs(x, xm)
+                iter_nums.append(0)
+                x_ants.append(float(xm))
+                iterations.append([0, float(xi), float(xs), float(xm), float(fxm), None])
+                error = tol + 1
+                c = 1
+
+                while error > tol and fxm != 0 and c < niter:
+                    if fi * fxm < 0:
+                        xs = xm
+                        fs = f.subs(x, xs)
                     else:
-                        return ["Fracasó en " + str(n) + " iteraciones"], table
-                else:
-                    return ["Intervalo inadecuado"], table
+                        xi = xm
+                        fi = f.subs(x, xi)
 
-            result, table = ReglaF(xi, xs, tol, n, fun)
+                    x_prev = xm
+                    xm = xi - (fi * (xs - xi) / (fs - fi))
+                    fxm = f.subs(x, xm)
+                    error = abs(xm - x_prev)
+                    iter_nums.append(c)
+                    x_ants.append(float(xm))
+                    iterations.append([c, float(xi), float(xs), float(xm), float(fxm), float(error)])
+                    c += 1
+
+                if fxm == 0:
+                    result = f"{xm} es una raíz exacta"
+                elif error < tol:
+                    result = f"{xm} es una aproximación de una raíz con una tolerancia {tol}"
+                else:
+                    result = f"El método fracasó en {niter} iteraciones"
 
             if export:
                 response = HttpResponse(content_type='text/plain')
-                response['Content-Disposition'] = 'attachment; filename="resultados_reglafalsa.txt"'
-                response.write(f"Raíz aproximada: {result[0]}\n")
-                response.write(f"{result[1]}\n")
+                response['Content-Disposition'] = 'attachment; filename="resultados_regla_falsa.txt"'
+                response.write(f"Resultado: {result}\n")
                 response.write("Iteración\tXi\tXs\tXm\tf(Xm)\tError\n")
-                for row in table:
+                for row in iterations:
                     response.write("\t".join(map(str, row)) + "\n")
                 return response
 
+            # Graficar la convergencia
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(iter_nums, x_ants, 'ro-', label='Convergencia del método de Regla Falsa')
+            ax.set_xlabel('Iteraciones')
+            ax.set_ylabel('Valores de $X_{ant}$')
+            ax.set_title('Convergencia del método de Regla Falsa')
+            ax.grid(True)
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
             context['result'] = result
-            context['table'] = table
+            context['iterations'] = iterations
             context['form'] = form
+            context['image'] = uri
+
         else:
             context['form'] = form
 
