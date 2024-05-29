@@ -13,7 +13,11 @@
 
 {% if coeficientes %}
     <h2>Coeficientes:</h2>
-    <pre>{{ coeficientes }}</pre>
+    <ul>
+        {% for coef in coeficientes %}
+            <li>{{ coef.0 }} {{ coef.1 }}</li>
+        {% endfor %}
+    </ul>
 {% endif %}
 
 {% if polinomios %}
@@ -23,6 +27,11 @@
             <li>{{ poly }}</li>
         {% endfor %}
     </ul>
+{% endif %}
+
+{% if image %}
+    <h2>Gráfica de la interpolación de Spline Lineal:</h2>
+    <img src="{{ image }}" alt="Gráfica de la interpolación de Spline Lineal">
 {% endif %}
 
 {% endblock %}

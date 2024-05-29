@@ -1337,9 +1337,37 @@ class SplineLinealPageView(TemplateView):
             context['polinomios'] = polinomios
             context['form'] = form
 
-            if form.cleaned_data['export_txt']:
+            # Graficar los puntos y el polinomio de interpolación
+            x_plot = np.linspace(min(xs), max(xs), 400)
+            y_plot = np.zeros_like(x_plot)
+            for i in range(n - 1):
+                indices = (x_plot >= xs[i]) & (x_plot <= xs[i + 1])
+                y_plot[indices] = coef[i, 0] * x_plot[indices] + coef[i, 1]
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(x_plot, y_plot, label='Polinomio de interpolación', color='blue')
+            ax.plot(xs, y, 'ro', label='Puntos de interpolación')
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.axvline(0, color='black', linewidth=0.5)
+            ax.grid(color='gray', linestyle='--', linewidth=0.5)
+            ax.set_xlabel('x')
+            ax.set_ylabel('f(x)')
+            ax.set_title('Gráfica de la interpolación de Spline Lineal')
+            plt.legend()
+
+            # Guardar la figura en un buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
+            context['image'] = uri
+
+            if form.cleaned_data.get('export_txt', False):
                 response = self.export_to_txt(coef, polinomios)
                 return response
+
         context['form'] = form
         return render(request, self.template_name, context)
 
