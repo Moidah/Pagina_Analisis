@@ -1,24 +1,20 @@
 {% extends 'base.html' %}
-
 {% block title %}Método de Newton{% endblock %}
 
 {% block content %}
 <h1>Método de Newton</h1>
-<p>El Método de Newton, también conocido como método de Newton-Raphson, es una técnica para encontrar raíces de una función. El Método de Newton siempre encontrará la raíz si el punto inicial x0está suficientemente cerca de la raíz verdadera xv  y si se cumplen las siguientes condiciones:</p>
+<p>El Método de Newton, también conocido como método de Newton-Raphson, es una técnica para encontrar raíces de una función. El Método de Newton siempre encontrará la raíz si el punto inicial x0 está suficientemente cerca de la raíz verdadera xv y si se cumplen las siguientes condiciones:</p>
+<ul>
     <li>f debe ser derivable dos veces.</li>
     <li>La primera derivada debe ser diferente de 0</li>
-    
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit" class="btn">Calcular</button>
 </form>
 
-{% if result %}
-    <h2>Resultado:</h2>
-    <p>Raíz aproximada: {{ result.0 }}</p>
-    <p>Número de iteraciones: {{ result.1 }}</p>
-    <p>Error: {{ result.2 }}</p>
+{% if error %}
+    <div class="error">{{ error }}</div>
 {% endif %}
 
 {% if iterations %}
@@ -27,9 +23,8 @@
         <thead>
             <tr>
                 <th>Iteración</th>
-                <th>Xant</th>
-                <th>Xact</th>
-                <th>f(Xact)</th>
+                <th>X0</th>
+                <th>F(X0)</th>
                 <th>Error</th>
             </tr>
         </thead>
@@ -44,4 +39,5 @@
         </tbody>
     </table>
 {% endif %}
+
 {% endblock %}
